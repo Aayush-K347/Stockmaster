@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockMaster AI | Automatic Stock Manager</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --primary-glow: #8b5cf6;
+            --glass-bg: rgba(255, 255, 255, 0.08); /* Slightly clearer glass */
+            --glass-border: rgba(255, 255, 255, 0.2); /* Brighter border */
+            --text-main: #ffffff;
+            --text-muted: #e5e7eb; /* CHANGED: Much lighter gray (almost white) */
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            /* CHANGED: Black background with subtle movement */
+            background: linear-gradient(135deg, #000000, #111111, #0a0a0a);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Navbar */
+        .navbar {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--glass-border);
+        }
+        
+        .brand-logo {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        /* Glass Cards */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            padding: 20px;
+        }
+        
+        /* Alert Items */
+        .alert-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 4px solid #ef4444;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+        
+        .alert-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        /* Utility Text Classes Override */
+        .text-muted {
+            color: var(--text-muted) !important; /* Force light gray */
+        }
+        
+        h4, h2, h5 {
+            color: #ffffff;
+        }
+
+        .shortage-badge {
+            background: rgba(239, 68, 68, 0.25);
+            color: #ffcaca; /* Lighter text for readability */
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1px solid rgba(239, 68, 68, 0.5);
+        }
+
+        /* Buttons */
+        .btn-glow-primary {
+            background: linear-gradient(90deg, #7c3aed, #6d28d9);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            border-radius: 50px;
+            box-shadow: 0 0 15px rgba(124, 58, 237, 0.3);
+        }
+        
+        .btn-glow-primary:hover {
+            background: linear-gradient(90deg, #8b5cf6, #7c3aed);
+            color: white;
+            box-shadow: 0 0 20px rgba(124, 58, 237, 0.6);
+        }
+
+        .btn-outline-light {
+            border-color: rgba(255,255,255,0.3);
+            color: #e5e7eb;
+        }
+        
+        .btn-outline-light:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: white;
+            color: white;
+        }
+
+        .btn-glow-success {
+            background: linear-gradient(90deg, #10b981, #059669);
+            border: none;
+            color: white;
+            border-radius: 50px;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-dark sticky-top mb-5">
+    <div class="container">
+        <a class="navbar-brand brand-logo" href="#">
+            ⚡ StockMaster
+        </a>
+        <div class="d-flex align-items-center">
+            <span class="text-muted me-3 small">AI Processor: <span class="text-success fw-bold">Active</span></span>
+            <button class="btn btn-outline-light btn-sm rounded-pill px-3">Logout</button>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="row">
+        <div class="col-12 mb-4">
+            <!-- CHANGED TITLE -->
+            <h2 class="fw-bold">Automatic Stock Manager</h2>
+            <p class="text-muted">Real-time AI analysis of stock levels and predictive demand.</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column: Smart Alerts -->
+        <div class="col-lg-4 mb-4">
+            <div class="glass-card h-100">
+                <h4>⚠️ Critical Alerts</h4>
+                <p class="text-muted small mb-4">Products at risk of stockout in next 7 days.</p>
+                
+                <div id="alerts-container">
+                    <!-- Loading State -->
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-light" role="status"></div>
+                        <p class="mt-3 text-muted">Scanning historical data...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Chart -->
+        <div class="col-lg-8 mb-4">
+            <div class="glass-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 id="chart-title" class="m-0">Forecast Visualization</h4>
+                    <span class="badge bg-dark border border-secondary text-light">30-Day Prediction</span>
+                </div>
+                <div style="position: relative; height: 400px; width: 100%;">
+                    <canvas id="forecastChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        fetchAlerts();
+    });
+
+    let myChart = null;
+
+    async function fetchAlerts() {
+        try {
+            const response = await fetch('/api/dashboard/smart-alerts');
+            const data = await response.json();
+            const container = document.getElementById('alerts-container');
+            container.innerHTML = '';
+
+            if (data.count === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4">
+                        <div style="font-size: 3rem;">✅</div>
+                        <h5 class="mt-3">All Systems Nominal</h5>
+                        <p class="text-muted">No stockouts predicted for this week.</p>
+                    </div>`;
+                return;
+            }
+
+            data.alerts.forEach((alert, index) => {
+                const card = document.createElement('div');
+                card.className = 'alert-item';
+                card.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="mb-1 fw-bold text-white">${alert.product_name}</h5>
+                            <small class="text-muted">SKU: ${alert.sku}</small>
+                        </div>
+                        <div class="text-end">
+                            <div class="text-muted small" style="opacity: 0.8;">Stock</div>
+                            <div class="fw-bold text-white fs-5">${alert.current_stock}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex align-items-center justify-content-between mt-3">
+                        <span class="shortage-badge">
+                            Shortage: -${alert.shortage_estimation}
+                        </span>
+                        <div class="text-end text-danger small fw-bold">
+                            Needs: ${alert.predicted_demand_7d}
+                        </div>
+                    </div>
+
+                    <div class="mt-3 d-grid gap-2">
+                        <button class="btn btn-sm btn-outline-light rounded-pill" onclick="loadChart(${alert.product_id}, '${alert.product_name}')">
+                            📈 Analysis
+                        </button>
+                        <button class="btn btn-sm btn-glow-primary" onclick="triggerAutoReorder(${alert.product_id}, ${alert.shortage_estimation}, this)">
+                            ⚡ Auto-Reorder
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+
+                if (index === 0) loadChart(alert.product_id, alert.product_name);
+            });
+
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+
+    async function loadChart(productId, productName) {
+        document.getElementById('chart-title').innerText = `Forecast: ${productName}`;
+        
+        const response = await fetch(`/api/forecast/${productId}`);
+        const data = await response.json();
+
+        const labels = data.map(item => item.date);
+        const quantities = data.map(item => item.qty);
+        const upperConf = data.map(item => item.range[1]);
+
+        const ctx = document.getElementById('forecastChart').getContext('2d');
+
+        if (myChart) myChart.destroy();
+
+        let gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(139, 92, 246, 0.6)');
+        gradient.addColorStop(1, 'rgba(139, 92, 246, 0.0)');
+
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'AI Predicted Demand',
+                        data: quantities,
+                        borderColor: '#a78bfa',
+                        backgroundColor: gradient,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#8b5cf6',
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Max Potential',
+                        data: upperConf,
+                        borderColor: 'rgba(236, 72, 153, 0.4)', 
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        borderWidth: 1,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: '#e5e7eb' } // Light text for legend
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }, // clearer grid
+                        ticks: { color: '#e5e7eb' } // light text
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }, // clearer grid
+                        ticks: { color: '#e5e7eb' } // light text
+                    }
+                }
+            }
+        });
+    }
+
+    async function triggerAutoReorder(productId, qty, btnElement) {
+        if(!confirm("Confirm Purchase Order generation?")) return;
+
+        const originalText = btnElement.innerHTML;
+        btnElement.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
+        btnElement.disabled = true;
+
+        try {
+            const response = await fetch('/api/procurement/auto-reorder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    product_id: productId,
+                    quantity: qty,
+                    vendor: "AI-Selected Vendor"
+                })
+            });
+            
+            const result = await response.json();
+
+            if (response.ok) {
+                btnElement.innerHTML = '✅ Order Sent';
+                btnElement.className = "btn btn-sm btn-glow-success";
+                alert(`Purchase Order Generated: ${result.order_reference}`);
+            } else {
+                alert("Error: " + result.message);
+                btnElement.innerHTML = originalText;
+                btnElement.disabled = false;
+            }
+        } catch (error) {
+            console.error(error);
+            btnElement.innerHTML = originalText;
+            btnElement.disabled = false;
+        }
+    }
+</script>
+
+</body>
+</html>

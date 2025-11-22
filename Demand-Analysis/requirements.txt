@@ -1,0 +1,6 @@
+pandas 
+prophet 
+sqlalchemy 
+pymysql
+flask
+cryptography
