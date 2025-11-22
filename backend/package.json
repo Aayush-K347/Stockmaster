@@ -5,11 +5,11 @@
   "type": "commonjs",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "tsc -p tsconfig.json",
-    "start": "node dist/server.js",
-    "db:seed": "ts-node src/scripts/seed.ts"
-  },
+  "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+  "build": "tsc -p tsconfig.json",
+  "start": "npm run build && node dist/server.js",
+  "db:seed": "ts-node src/scripts/seed.ts"
+},
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
