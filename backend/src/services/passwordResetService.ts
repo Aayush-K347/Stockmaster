@@ -15,34 +15,16 @@ export const createPasswordResetRequest = async (email: string) => {
   const otp = generateOtp();
   const expiresAt = admin.firestore.Timestamp.fromMillis(Date.now() + OTP_EXPIRY_MS);
 
-  try {
-    await firebaseAuth.getUserByEmail(normalizedEmail);
-  } catch (error: any) {
-    if (error?.code === 'auth/user-not-found') {
-      logger.info({ email: normalizedEmail }, 'Password reset requested for non-existent user');
-      return;
-    }
+  const resetLink = await firebaseAuth.generatePasswordResetLink(normalizedEmail, {
+    url: env.passwordResetRedirectUrl,
+    handleCodeInApp: true,
+  });
 
-    logger.error({ error }, 'Failed to look up user for password reset');
-    throw new HttpError(500, 'Unable to start password reset request');
-  }
-
-  let oobCode: string | null = null;
-  try {
-    const resetLink = await firebaseAuth.generatePasswordResetLink(normalizedEmail, {
-      url: env.passwordResetRedirectUrl,
-      handleCodeInApp: true,
-    });
-
-    const resetUrl = new URL(resetLink);
-    oobCode = resetUrl.searchParams.get('oobCode');
-  } catch (error) {
-    logger.error({ error }, 'Failed to generate password reset link');
-    throw new HttpError(500, 'Unable to generate reset code');
-  }
+  const resetUrl = new URL(resetLink);
+  const oobCode = resetUrl.searchParams.get('oobCode');
 
   if (!oobCode) {
-    logger.error({ email: normalizedEmail }, 'Failed to extract oobCode from reset link');
+    logger.error({ resetLink }, 'Failed to extract oobCode from reset link');
     throw new HttpError(500, 'Unable to generate reset code');
   }
 
