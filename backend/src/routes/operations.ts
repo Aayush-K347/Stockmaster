@@ -6,9 +6,9 @@ import { createOperation, getOperations, updateOperationData, updateOperationSta
 
 const router = Router();
 
-router.get('/', authenticate, async (_req, res, next) => {
+router.get('/', authenticate, async (req, res, next) => {
   try {
-    const operations = await getOperations();
+    const operations = await getOperations(req.user?.userId);
     res.json(operations);
   } catch (error) {
     next(error);
@@ -36,7 +36,7 @@ const createSchema = z.object({
 router.post('/', authenticate, async (req, res, next) => {
   try {
     const payload = createSchema.parse(req.body);
-    const op = await createOperation(payload);
+    const op = await createOperation(payload, req.user?.userId);
     res.status(201).json(op);
   } catch (error) {
     next(error);
@@ -50,7 +50,7 @@ router.put('/:id', authenticate, async (req, res, next) => {
     const payload = updateSchema.parse(req.body);
     const id = Number(req.params.id);
     if (Number.isNaN(id)) throw new HttpError(400, 'Invalid id');
-    await updateOperationData(id, payload as any);
+    await updateOperationData(id, payload as any, req.user?.userId);
     res.json({ message: 'Updated' });
   } catch (error) {
     next(error);

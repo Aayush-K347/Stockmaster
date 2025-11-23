@@ -76,12 +76,12 @@ VALUES
 ON DUPLICATE KEY UPDATE event = VALUES(event);
 
 -- Sample operations
-INSERT INTO inventory_stockmove (type, reference, contact, responsible, status, source_location_id, dest_location_id, scheduled_date, notes, version, created_at, last_edited_by)
+INSERT INTO inventory_stockmove (type, reference, contact, responsible, status, source_location_id, dest_location_id, scheduled_date, notes, version, created_at, last_edited_by, user_id)
 VALUES
- ('RECEIPT', 'WH/IN/0001', 'Acme Steel Co.', 'Admin', 'DONE', NULL, (SELECT id FROM inventory_location WHERE code = 'WH-MAIN'), '2023-10-25', 'Initial receipt', 1, '2023-10-25 14:30:00', 'Admin'),
- ('DELIVERY', 'WH/OUT/0001', 'TechStart Inc.', 'Manager', 'READY', (SELECT id FROM inventory_location WHERE code = 'WH-DISPATCH'), NULL, '2023-10-27', 'Delivery to customer', 2, '2023-10-26 09:15:00', 'Manager'),
- ('INTERNAL', 'WH/INT/0002', 'Internal', 'Staff', 'DRAFT', (SELECT id FROM inventory_location WHERE code = 'WH-MAIN'), (SELECT id FROM inventory_location WHERE code = 'WH-DISPATCH'), '2023-10-28', 'Move to dispatch', 1, '2023-10-26 11:00:00', 'Staff'),
- ('RECEIPT', 'WH/IN/0003', 'Global Electronics', 'Admin', 'WAITING', NULL, (SELECT id FROM inventory_location WHERE code = 'WH-MAIN'), '2023-11-01', 'Incoming monitors', 1, '2023-10-27 16:45:00', 'Admin')
+ ('RECEIPT', 'WH/IN/0001', 'Acme Steel Co.', 'Admin', 'DONE', NULL, (SELECT id FROM inventory_location WHERE code = 'WH-MAIN'), '2023-10-25', 'Initial receipt', 1, '2023-10-25 14:30:00', 'Admin', (SELECT id FROM inventory_user WHERE email = 'admin@stockmaster.com' LIMIT 1)),
+ ('DELIVERY', 'WH/OUT/0001', 'TechStart Inc.', 'Manager', 'READY', (SELECT id FROM inventory_location WHERE code = 'WH-DISPATCH'), NULL, '2023-10-27', 'Delivery to customer', 2, '2023-10-26 09:15:00', 'Manager', (SELECT id FROM inventory_user WHERE email = 'admin@stockmaster.com' LIMIT 1)),
+ ('INTERNAL', 'WH/INT/0002', 'Internal', 'Staff', 'DRAFT', (SELECT id FROM inventory_location WHERE code = 'WH-MAIN'), (SELECT id FROM inventory_location WHERE code = 'WH-DISPATCH'), '2023-10-28', 'Move to dispatch', 1, '2023-10-26 11:00:00', 'Staff', (SELECT id FROM inventory_user WHERE email = 'admin@stockmaster.com' LIMIT 1)),
+ ('RECEIPT', 'WH/IN/0003', 'Global Electronics', 'Admin', 'WAITING', NULL, (SELECT id FROM inventory_location WHERE code = 'WH-MAIN'), '2023-11-01', 'Incoming monitors', 1, '2023-10-27 16:45:00', 'Admin', (SELECT id FROM inventory_user WHERE email = 'admin@stockmaster.com' LIMIT 1))
 ON DUPLICATE KEY UPDATE status = VALUES(status), scheduled_date = VALUES(scheduled_date), last_edited_by = VALUES(last_edited_by);
 
 -- Operation lines

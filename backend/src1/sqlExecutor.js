@@ -56,9 +56,18 @@ export function validateSQL(sql) {
   return true;
 }
 
-export async function executeSQL(sql) {
+function assertUserScope(sql, userId) {
+  if (!userId) return;
+  const pattern = new RegExp(`\\b(user_id|created_by)\\s*=\\s*${userId}\\b`, 'i');
+  if (!pattern.test(sql)) {
+    throw new Error('Query must include a user scope filter.');
+  }
+}
+
+export async function executeSQL(sql, userId) {
   // Validate before execution
   validateSQL(sql);
+  assertUserScope(sql, userId);
   
   const pool = getPool();
   const connection = await pool.getConnection();

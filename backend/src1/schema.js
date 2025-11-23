@@ -109,6 +109,7 @@ TABLE inventory_stockmove (
   notes TEXT,
   version INT,
   last_edited_by VARCHAR(255),
+  user_id INT REFERENCES inventory_user(id),
   created_at DATETIME,
   updated_at DATETIME
 )
@@ -178,6 +179,8 @@ STRICT RULES:
 13. Stock move types are: 'RECEIPT', 'DELIVERY', 'INTERNAL', 'ADJUSTMENT' (uppercase)
 
 14. Stock move statuses are: 'DRAFT', 'WAITING', 'READY', 'DONE', 'CANCELLED' (uppercase)
+
+15. Always filter results to the requesting user with created_by or user_id
 
 EXAMPLE QUERIES:
 
