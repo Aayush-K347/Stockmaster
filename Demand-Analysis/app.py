@@ -38,8 +38,8 @@ def trigger_forecast():
 def get_smart_alerts():
     sql = text("""
         WITH Stock AS (
-            SELECT product_id, SUM(quantity) as total_qty 
-            FROM inventory_stockquant 
+            SELECT product_id, SUM(quantity) as total_qty
+            FROM inventory_stockquant
             GROUP BY product_id
         ),
         Demand AS (
@@ -48,9 +48,9 @@ def get_smart_alerts():
             WHERE forecast_date BETWEEN CURRENT_DATE AND DATE_ADD(CURRENT_DATE, INTERVAL 7 DAY)
             GROUP BY product_id
         )
-        SELECT 
-            p.id, 
-            p.name, 
+        SELECT
+            p.id,
+            p.name,
             p.sku,
             COALESCE(s.total_qty, 0) as current_stock,
             COALESCE(d.needed_qty, 0) as predicted_demand
@@ -61,26 +61,29 @@ def get_smart_alerts():
     """)
 
     alerts = []
-    with engine.connect() as conn:
-        rows = conn.execute(sql).fetchall()
-        for row in rows:
-            stock = float(row[3])
-            demand = float(row[4])
-            deficit = demand - stock
-            alerts.append({
-                "product_id": row[0],
-                "product_name": row[1],
-                "sku": row[2],
-                "current_stock": stock,
-                "predicted_demand_7d": round(demand, 2),
-                "shortage_estimation": round(deficit, 2),
-                "alert_level": "CRITICAL" if stock == 0 else "WARNING"
-            })
+    try:
+        with engine.connect() as conn:
+            rows = conn.execute(sql).fetchall()
+            for row in rows:
+                stock = float(row[3])
+                demand = float(row[4])
+                deficit = demand - stock
+                alerts.append({
+                    "product_id": row[0],
+                    "product_name": row[1],
+                    "sku": row[2],
+                    "current_stock": stock,
+                    "predicted_demand_7d": round(demand, 2),
+                    "shortage_estimation": round(deficit, 2),
+                    "alert_level": "CRITICAL" if stock == 0 else "WARNING"
+                })
 
-    return jsonify({
-        "count": len(alerts),
-        "alerts": alerts
-    })
+        return jsonify({
+            "count": len(alerts),
+            "alerts": alerts
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @app.route('/api/forecast/<int:product_id>', methods=['GET'])
