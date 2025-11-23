@@ -197,6 +197,16 @@
     async function fetchAlerts() {
         try {
             const response = await fetch('/api/dashboard/smart-alerts');
+
+            if (!response.ok) {
+                throw new Error(`API error ${response.status}`);
+            }
+
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                throw new Error('Invalid response format');
+            }
+
             const data = await response.json();
             const container = document.getElementById('alerts-container');
             container.innerHTML = '';
@@ -251,6 +261,13 @@
 
         } catch (error) {
             console.error('Error:', error);
+            const container = document.getElementById('alerts-container');
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <div style="font-size: 2rem;">⚠️</div>
+                    <h5 class="mt-3">Unable to load alerts</h5>
+                    <p class="text-muted">${error.message}</p>
+                </div>`;
         }
     }
 
