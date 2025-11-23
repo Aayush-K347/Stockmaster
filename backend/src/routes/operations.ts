@@ -8,7 +8,7 @@ const router = Router();
 
 router.get('/', authenticate, async (req, res, next) => {
   try {
-    const operations = await getOperations(req.user?.userId);
+    const operations = await getOperations();
     res.json(operations);
   } catch (error) {
     next(error);

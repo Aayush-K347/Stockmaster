@@ -7,8 +7,7 @@ const router = Router();
 
 router.get('/', authenticate, async (req, res, next) => {
   try {
-    const userId = req.user?.userId;
-    const products = await getProducts(userId);
+    const products = await getProducts();
     res.json(products);
   } catch (error) {
     next(error);

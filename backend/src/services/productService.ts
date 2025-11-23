@@ -1,7 +1,6 @@
 import { ResultSetHeader } from 'mysql2';
 import { pool } from '../config/database';
 import { Product } from '../types';
-import { HttpError } from '../middleware/errorHandler';
 
 export interface CreateProductInput {
   name: string;
@@ -17,9 +16,7 @@ export interface CreateProductInput {
   initialQuantity?: number;
 }
 
-export const getProducts = async (userId?: number): Promise<Product[]> => {
-  if (!userId) throw new HttpError(401, 'Unauthenticated');
-
+export const getProducts = async (): Promise<Product[]> => {
   const [rows] = await pool.query(
     `SELECT p.id,
             p.name,
@@ -38,10 +35,8 @@ export const getProducts = async (userId?: number): Promise<Product[]> => {
      LEFT JOIN inventory_uom u ON u.id = p.uom_id
      LEFT JOIN inventory_stockquant q ON q.product_id = p.id
      LEFT JOIN inventory_location dl ON dl.id = p.default_location_id
-     WHERE p.created_by = ?
      GROUP BY p.id, p.name, p.sku, pc.name, u.code, p.min_stock, p.max_stock, p.price, p.barcode, p.qc_status, dl.code
-     ORDER BY p.id DESC`,
-    [userId]
+     ORDER BY p.id DESC`
   );
 
   return (rows as any[]).map((row) => ({

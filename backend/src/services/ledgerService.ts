@@ -1,9 +1,7 @@
 import { pool } from '../config/database';
 import { StockLedgerEntry } from '../types';
-import { HttpError } from '../middleware/errorHandler';
 
-export const getLedgerEntries = async (userId?: number): Promise<StockLedgerEntry[]> => {
-  if (!userId) throw new HttpError(401, 'Unauthenticated');
+export const getLedgerEntries = async (): Promise<StockLedgerEntry[]> => {
   const [rows] = await pool.query(
     `SELECT l.id,
             l.created_at AS date,
@@ -21,9 +19,7 @@ export const getLedgerEntries = async (userId?: number): Promise<StockLedgerEntr
      LEFT JOIN inventory_product p ON p.id = l.product_id
      LEFT JOIN inventory_location loc ON loc.id = l.location_id
      LEFT JOIN inventory_user u ON u.id = l.user_id
-     WHERE COALESCE(l.user_id, sm.user_id) = ?
-     ORDER BY l.created_at DESC`,
-    [userId]
+     ORDER BY l.created_at DESC`
   );
 
   return (rows as any[]).map((row) => ({
