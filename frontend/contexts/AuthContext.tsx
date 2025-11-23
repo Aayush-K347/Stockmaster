@@ -4,6 +4,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
+  verifyPasswordResetCode,
+  confirmPasswordReset as firebaseConfirmPasswordReset,
 } from 'firebase/auth';
 import { firebaseAuth } from '../firebaseClient';
 
@@ -23,6 +25,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  verifyResetCode: (oobCode: string) => Promise<string>;
+  confirmPasswordReset: (oobCode: string, newPassword: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -128,7 +132,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const resetPassword = async (email: string) => {
-    await sendPasswordResetEmail(firebaseAuth, email);
+    const resetRedirect = import.meta.env.VITE_FIREBASE_RESET_REDIRECT_URL;
+    const actionCodeSettings = resetRedirect
+      ? {
+          url: resetRedirect,
+          handleCodeInApp: true,
+        }
+      : undefined;
+
+    try {
+      if (actionCodeSettings) {
+        await sendPasswordResetEmail(firebaseAuth, email, actionCodeSettings);
+      } else {
+        await sendPasswordResetEmail(firebaseAuth, email);
+      }
+    } catch (err: any) {
+      if (err?.code === 'auth/unauthorized-continue-uri') {
+        // Fallback to Firebase-hosted flow when the redirect domain is not allowlisted yet
+        await sendPasswordResetEmail(firebaseAuth, email);
+        return;
+      }
+      throw err;
+    }
+  };
+
+  const verifyResetCode = async (oobCode: string) => {
+    return verifyPasswordResetCode(firebaseAuth, oobCode);
+  };
+
+  const confirmPasswordReset = async (oobCode: string, newPassword: string) => {
+    await firebaseConfirmPasswordReset(firebaseAuth, oobCode, newPassword);
   };
 
   const logout = async () => {
@@ -155,6 +188,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         login,
         signup,
         resetPassword,
+        verifyResetCode,
+        confirmPasswordReset,
         logout,
       }}
     >
