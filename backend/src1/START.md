@@ -23,6 +23,7 @@
    Create a `.env` file in `backend/src1/` with:
    ```env
    GEMINI_API_KEY=your_gemini_api_key_here
+   GEMINI_MODEL=gemini-2.5-flash
    DB_HOST=localhost
    DB_PORT=3306
    DB_USER=root
@@ -31,7 +32,7 @@
    PORT=5000
    ```
 
-   > ℹ️ A default Gemini API key and the `gemini-2.5-flash` model are configured in `config.js` so the service can start immediately. Replace the API key via `GEMINI_API_KEY` if needed; the model remains fixed to `gemini-2.5-flash` for stability.
+   > ℹ️ A default Gemini API key and the `gemini-2.5-flash` model are configured in `config.js` so the service can start immediately. Override them in your `.env` to use your own credentials and model preference via `GEMINI_API_KEY` and `GEMINI_MODEL`.
 
 4. **Start the server**
    ```bash

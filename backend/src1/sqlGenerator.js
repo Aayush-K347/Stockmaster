@@ -98,6 +98,9 @@ function ensureUserScope(sql, userId) {
 }
 
 export async function generateSQL(question, userId, retries = 2) {
+  // Try configured model first, then fallbacks (dedupe to avoid double tries)
+  const modelsToTry = [config.gemini.model, ...MODEL_FALLBACKS]
+    .filter((model, index, arr) => arr.indexOf(model) === index);
   let lastError = null;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -112,7 +115,7 @@ export async function generateSQL(question, userId, retries = 2) {
         }
       });
 
-      const prompt = `${systemPrompt}
+      const prompt = `${systemPrompt}",
 
 CURRENT USER ID: ${userId}
 Always include a filter to ensure results are only for this user (e.g., created_by = ${userId} or user_id = ${userId}).
@@ -127,12 +130,16 @@ SQL:`;
       const response = await result.response;
       const rawText = response.text();
 
-      console.log('🤖 Raw Gemini response:', rawText);
+      console.log(`🤖 Raw Gemini response:
+${rawText}
+`);
 
       // Validate, clean, and enforce user scope on the response
       const sql = ensureUserScope(validateAndCleanSQL(rawText), userId);
 
-      console.log('✅ Cleaned SQL:', sql);
+      console.log(`✅ Cleaned SQL:
+${sql}
+`);
       return sql;
 
     } catch (error) {

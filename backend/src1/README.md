@@ -13,6 +13,7 @@ Natural Language to SQL Query Service for StockMaster Inventory System.
    Create a `.env` file in this directory with:
    ```env
    GEMINI_API_KEY=your_gemini_api_key_here
+   GEMINI_MODEL=gemini-2.5-flash
    DB_HOST=localhost
    DB_PORT=3306
    DB_USER=root
@@ -22,6 +23,7 @@ Natural Language to SQL Query Service for StockMaster Inventory System.
    ```
 
    > ℹ️ A default Gemini API key is bundled in `config.js` to keep the service running out of the box. Replace it via `GEMINI_API_KEY` in your `.env` to avoid key rotation issues or quota conflicts. The model is pinned to `gemini-2.5-flash` for stability and cannot be overridden.
+   > ℹ️ A default Gemini API key is bundled in `config.js` to keep the service running out of the box. Replace it via `GEMINI_API_KEY` in your `.env` to avoid key rotation issues or quota conflicts. You can also pin a specific model via `GEMINI_MODEL` (defaults to `gemini-2.5-flash`).
 
 3. **Start the Server**
    ```bash
