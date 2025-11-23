@@ -153,7 +153,16 @@ export const StoreProvider = ({ children }: { children?: ReactNode }) => {
 
   useEffect(() => {
     if (!apiReady) {
-      loadFromSnapshotOrSeed();
+      const snapshot = readSessionSnapshot(sessionKey);
+      if (snapshot) {
+        setProducts(snapshot.products);
+        setOperations(snapshot.operations);
+        setLedger(snapshot.ledger);
+      } else {
+        setProducts(MOCK_PRODUCTS);
+        setOperations(MOCK_OPERATIONS);
+        setLedger(MOCK_LEDGER);
+      }
       return;
     }
 
@@ -166,8 +175,9 @@ export const StoreProvider = ({ children }: { children?: ReactNode }) => {
   }, [apiReady, sessionKey]);
 
   useEffect(() => {
+    if (apiReady) return;
     writeSessionSnapshot(sessionKey, { products, operations, ledger });
-  }, [ledger, operations, products, sessionKey]);
+  }, [apiReady, ledger, operations, products, sessionKey]);
 
   const addProduct = (product: Product) => {
     setProducts(prev => [product, ...prev]);
