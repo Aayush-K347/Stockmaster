@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Plus, Printer, X, Search, Trash2, PackageCheck, ArrowRight, Copy, FileEdit, AlertCircle } from 'lucide-react';
 import { useStore } from '../../contexts/StoreContext';
 import { GlassCard } from '../../components/GlassCard';
@@ -8,6 +8,7 @@ import { Operation, OperationItem } from '../../types';
 export default function Receipts() {
   const { operations, products, addOperation, updateOperation, validateOperation, deleteOperation } = useStore();
   const [showCreate, setShowCreate] = useState(false);
+  const [printPreview, setPrintPreview] = useState<Operation | null>(null);
   
   // Form State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -16,6 +17,11 @@ export default function Receipts() {
   const [selectedItems, setSelectedItems] = useState<OperationItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddingProduct, setIsAddingProduct] = useState(false);
+
+  const destinationLabel = useMemo(() => {
+    if (!printPreview?.destLocation) return 'Main Warehouse (Stock)';
+    return printPreview.destLocation === 'WH-Main' ? 'Main Warehouse (Stock)' : printPreview.destLocation;
+  }, [printPreview?.destLocation]);
 
   // Filter products
   const filteredProducts = products.filter(p => 
@@ -299,6 +305,90 @@ export default function Receipts() {
         </div>
       )}
 
+      {/* Printable Receipt Preview */}
+      {printPreview && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6 animate-fade-in">
+          <div className="bg-gradient-to-b from-[#0B0815] to-black border border-white/10 rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden">
+            <div className="flex items-center justify-between px-8 py-6 border-b border-white/10 bg-white/5">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Receipt</p>
+                <h2 className="text-2xl font-display text-white font-bold">{printPreview.reference}</h2>
+                <p className="text-sm text-gray-400 mt-1">Validated vendor receipt overview</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="px-3 py-1 rounded-full text-[11px] font-bold tracking-wide bg-green-500/10 text-green-400 border border-green-500/20">{printPreview.status}</span>
+                <button
+                  onClick={() => window.print()}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primaryLight transition-colors"
+                >
+                  <Printer size={16} /> Print
+                </button>
+                <button onClick={() => setPrintPreview(null)} className="text-gray-500 hover:text-white transition-colors p-2 rounded-full bg-white/5">
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-8 px-8 py-6 bg-black/30 border-b border-white/5">
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500 uppercase tracking-wider">Vendor</p>
+                <p className="text-lg text-white font-semibold">{printPreview.contact}</p>
+                <p className="text-sm text-gray-400">Scheduled: {new Date(printPreview.scheduledDate).toLocaleDateString()}</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500 uppercase tracking-wider">Destination</p>
+                <p className="text-lg text-white font-semibold">{destinationLabel}</p>
+                <p className="text-sm text-gray-400">Handled by {printPreview.responsible || 'Admin'}</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500 uppercase tracking-wider">Summary</p>
+                <p className="text-lg text-white font-semibold">{printPreview.items.length} line items</p>
+                <p className="text-sm text-gray-400">Total to receive: {printPreview.items.reduce((sum, i) => sum + i.quantity, 0)}</p>
+              </div>
+            </div>
+
+            <div className="px-8 py-6">
+              <div className="overflow-hidden rounded-xl border border-white/10">
+                <table className="w-full text-left">
+                  <thead className="bg-white/5 text-xs uppercase tracking-wider text-gray-400">
+                    <tr>
+                      <th className="px-4 py-3">Product</th>
+                      <th className="px-4 py-3">SKU</th>
+                      <th className="px-4 py-3 text-right">Quantity</th>
+                      <th className="px-4 py-3 text-right">Location</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {printPreview.items.map(item => {
+                      const product = products.find(p => p.id === item.productId);
+                      return (
+                        <tr key={item.productId} className="bg-black/20">
+                          <td className="px-4 py-3 text-white font-medium">{item.productName}</td>
+                          <td className="px-4 py-3 text-gray-400 font-mono text-sm">{product?.sku || '—'}</td>
+                          <td className="px-4 py-3 text-right text-white font-semibold">{item.quantity} {product?.uom || ''}</td>
+                          <td className="px-4 py-3 text-right text-gray-400">{product?.location || printPreview.destLocation || 'WH-Main'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex justify-between items-center mt-6 text-sm text-gray-400">
+                <div>
+                  <p className="uppercase text-[11px] tracking-wide text-gray-500">Notes</p>
+                  <p className="text-white/80">{printPreview.notes || 'Receipt validated. Ready for putaway.'}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Created</p>
+                  <p className="text-white">{printPreview.createdAt ? new Date(printPreview.createdAt).toLocaleString() : '—'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* List View */}
       <GlassCard className="overflow-hidden border-t-0">
         <div className="overflow-x-auto">
@@ -349,7 +439,13 @@ export default function Receipts() {
                           )}
                           
                           {op.status === 'DONE' && (
-                             <button className="text-gray-600 hover:text-white transition-colors p-2"><Printer size={18}/></button>
+                             <button
+                               onClick={() => setPrintPreview(op)}
+                               className="text-gray-600 hover:text-white transition-colors p-2"
+                               title="View printable receipt"
+                             >
+                               <Printer size={18}/>
+                             </button>
                           )}
                        </td>
                     </tr>
