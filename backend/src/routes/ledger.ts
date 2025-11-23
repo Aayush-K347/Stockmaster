@@ -6,7 +6,7 @@ const router = Router();
 
 router.get('/', authenticate, async (req, res, next) => {
   try {
-    const entries = await getLedgerEntries();
+    const entries = await getLedgerEntries(req.user?.userId);
     res.json(entries);
   } catch (error) {
     next(error);

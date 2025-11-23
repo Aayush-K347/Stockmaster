@@ -31,7 +31,9 @@ const buildOperationFromRows = (rows: any[]): Operation => {
   };
 };
 
-export const getOperations = async (): Promise<Operation[]> => {
+export const getOperations = async (userId?: number): Promise<Operation[]> => {
+  if (!userId) throw new HttpError(401, 'Unauthenticated');
+
   const [rows] = await pool.query(
     `SELECT sm.id,
             sm.type,
@@ -54,7 +56,10 @@ export const getOperations = async (): Promise<Operation[]> => {
      LEFT JOIN inventory_product p ON p.id = st.product_id
      LEFT JOIN inventory_location src ON src.id = sm.source_location_id
      LEFT JOIN inventory_location dest ON dest.id = sm.dest_location_id
+     WHERE sm.user_id = ?
      ORDER BY sm.created_at DESC`
+    ,
+    [userId]
   );
 
   const grouped = new Map<number, any[]>();

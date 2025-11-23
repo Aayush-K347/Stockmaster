@@ -1,7 +1,10 @@
 import { pool } from '../config/database';
+import { HttpError } from '../middleware/errorHandler';
 import { StockLedgerEntry } from '../types';
 
-export const getLedgerEntries = async (): Promise<StockLedgerEntry[]> => {
+export const getLedgerEntries = async (userId?: number): Promise<StockLedgerEntry[]> => {
+  if (!userId) throw new HttpError(401, 'Unauthenticated');
+
   const [rows] = await pool.query(
     `SELECT l.id,
             l.created_at AS date,
@@ -19,7 +22,9 @@ export const getLedgerEntries = async (): Promise<StockLedgerEntry[]> => {
      LEFT JOIN inventory_product p ON p.id = l.product_id
      LEFT JOIN inventory_location loc ON loc.id = l.location_id
      LEFT JOIN inventory_user u ON u.id = l.user_id
-     ORDER BY l.created_at DESC`
+     WHERE sm.user_id = ?
+     ORDER BY l.created_at DESC`,
+    [userId]
   );
 
   return (rows as any[]).map((row) => ({
