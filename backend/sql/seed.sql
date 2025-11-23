@@ -52,12 +52,12 @@ INSERT INTO inventory_productcategory (name) VALUES
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
 -- Products
-INSERT INTO inventory_product (category_id, name, sku, uom_id, min_stock, max_stock, price, default_location_id, qc_status, barcode) VALUES
- ((SELECT id FROM inventory_productcategory WHERE name = 'Raw Material'), 'Steel Rods 20mm', 'ST-20', (SELECT id FROM inventory_uom WHERE code = 'kg'), 50, 500, 45.00, (SELECT id FROM inventory_location WHERE code = 'WH-MAIN'), 'PASS', NULL),
- ((SELECT id FROM inventory_productcategory WHERE name = 'Raw Material'), 'Copper Wire', 'CU-W1', (SELECT id FROM inventory_uom WHERE code = 'm'), 100, 300, 12.50, (SELECT id FROM inventory_location WHERE code = 'WH-MAIN'), 'PENDING', NULL),
- ((SELECT id FROM inventory_productcategory WHERE name = 'Finished Goods'), 'Office Chair Ergonomic', 'FURN-01', (SELECT id FROM inventory_uom WHERE code = 'unit'), 10, 50, 150.00, (SELECT id FROM inventory_location WHERE code = 'WH-DISPATCH'), 'PASS', NULL),
- ((SELECT id FROM inventory_productcategory WHERE name = 'Finished Goods'), 'Gaming Desk', 'FURN-02', (SELECT id FROM inventory_uom WHERE code = 'unit'), 5, 30, 220.00, (SELECT id FROM inventory_location WHERE code = 'WH-DISPATCH'), 'PASS', NULL),
- ((SELECT id FROM inventory_productcategory WHERE name = 'Electronics'), 'LED Monitor 27\"', 'ELEC-01', (SELECT id FROM inventory_uom WHERE code = 'unit'), 20, 150, 300.00, (SELECT id FROM inventory_location WHERE code = 'WH-MAIN'), 'PASS', NULL)
+INSERT INTO inventory_product (category_id, name, sku, uom_id, min_stock, max_stock, price, default_location_id, qc_status, barcode, created_by) VALUES
+ ((SELECT id FROM inventory_productcategory WHERE name = 'Raw Material'), 'Steel Rods 20mm', 'ST-20', (SELECT id FROM inventory_uom WHERE code = 'kg'), 50, 500, 45.00, (SELECT id FROM inventory_location WHERE code = 'WH-MAIN'), 'PASS', NULL, (SELECT id FROM inventory_user WHERE email = 'admin@stockmaster.com' LIMIT 1)),
+ ((SELECT id FROM inventory_productcategory WHERE name = 'Raw Material'), 'Copper Wire', 'CU-W1', (SELECT id FROM inventory_uom WHERE code = 'm'), 100, 300, 12.50, (SELECT id FROM inventory_location WHERE code = 'WH-MAIN'), 'PENDING', NULL, (SELECT id FROM inventory_user WHERE email = 'admin@stockmaster.com' LIMIT 1)),
+ ((SELECT id FROM inventory_productcategory WHERE name = 'Finished Goods'), 'Office Chair Ergonomic', 'FURN-01', (SELECT id FROM inventory_uom WHERE code = 'unit'), 10, 50, 150.00, (SELECT id FROM inventory_location WHERE code = 'WH-DISPATCH'), 'PASS', NULL, (SELECT id FROM inventory_user WHERE email = 'admin@stockmaster.com' LIMIT 1)),
+ ((SELECT id FROM inventory_productcategory WHERE name = 'Finished Goods'), 'Gaming Desk', 'FURN-02', (SELECT id FROM inventory_uom WHERE code = 'unit'), 5, 30, 220.00, (SELECT id FROM inventory_location WHERE code = 'WH-DISPATCH'), 'PASS', NULL, (SELECT id FROM inventory_user WHERE email = 'admin@stockmaster.com' LIMIT 1)),
+ ((SELECT id FROM inventory_productcategory WHERE name = 'Electronics'), 'LED Monitor 27\"', 'ELEC-01', (SELECT id FROM inventory_uom WHERE code = 'unit'), 20, 150, 300.00, (SELECT id FROM inventory_location WHERE code = 'WH-MAIN'), 'PASS', NULL, (SELECT id FROM inventory_user WHERE email = 'admin@stockmaster.com' LIMIT 1))
 ON DUPLICATE KEY UPDATE price = VALUES(price), min_stock = VALUES(min_stock), max_stock = VALUES(max_stock), default_location_id = VALUES(default_location_id), qc_status = VALUES(qc_status);
 
 -- Stock on hand

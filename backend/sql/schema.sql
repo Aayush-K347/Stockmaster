@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS inventory_product (
   id INT AUTO_INCREMENT PRIMARY KEY,
   category_id INT NULL,
   name VARCHAR(255) NOT NULL,
-  sku VARCHAR(100) NOT NULL UNIQUE,
+  sku VARCHAR(100) NOT NULL,
   uom_id INT NOT NULL,
   min_stock DECIMAL(12,2) DEFAULT 0,
   max_stock DECIMAL(12,2) DEFAULT 0,
@@ -119,10 +119,69 @@ CREATE TABLE IF NOT EXISTS inventory_product (
   default_location_id INT NULL,
   qc_status ENUM('PASS','FAIL','PENDING') DEFAULT 'PENDING',
   barcode VARCHAR(100),
+  created_by INT NULL,
   CONSTRAINT fk_product_cat FOREIGN KEY (category_id) REFERENCES inventory_productcategory(id),
   CONSTRAINT fk_product_uom FOREIGN KEY (uom_id) REFERENCES inventory_uom(id),
-  CONSTRAINT fk_product_loc FOREIGN KEY (default_location_id) REFERENCES inventory_location(id)
+  CONSTRAINT fk_product_loc FOREIGN KEY (default_location_id) REFERENCES inventory_location(id),
+  CONSTRAINT fk_product_user FOREIGN KEY (created_by) REFERENCES inventory_user(id),
+  UNIQUE KEY uniq_user_sku (created_by, sku)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Backward compatibility for existing product data
+SET @prod_user_exists := (
+  SELECT COUNT(*)
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'inventory_product'
+    AND COLUMN_NAME = 'created_by'
+);
+SET @sql := IF(@prod_user_exists = 0, 'ALTER TABLE inventory_product ADD COLUMN created_by INT NULL AFTER barcode', 'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @old_sku_index := (
+  SELECT COUNT(*)
+  FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'inventory_product'
+    AND INDEX_NAME = 'sku'
+);
+SET @sql := IF(@old_sku_index > 0, 'ALTER TABLE inventory_product DROP INDEX sku', 'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @user_sku_index := (
+  SELECT COUNT(*)
+  FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'inventory_product'
+    AND INDEX_NAME = 'uniq_user_sku'
+);
+SET @sql := IF(@user_sku_index = 0, 'ALTER TABLE inventory_product ADD UNIQUE KEY uniq_user_sku (created_by, sku)', 'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @product_user_fk := (
+  SELECT COUNT(*)
+  FROM information_schema.KEY_COLUMN_USAGE
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'inventory_product'
+    AND COLUMN_NAME = 'created_by'
+    AND REFERENCED_TABLE_NAME = 'inventory_user'
+);
+SET @sql := IF(@product_user_fk = 0, 'ALTER TABLE inventory_product ADD CONSTRAINT fk_product_user FOREIGN KEY (created_by) REFERENCES inventory_user(id)', 'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+UPDATE inventory_product
+SET created_by = (
+  SELECT id FROM inventory_user ORDER BY id LIMIT 1
+)
+WHERE created_by IS NULL;
 
 CREATE TABLE IF NOT EXISTS inventory_stocklot (
   id INT AUTO_INCREMENT PRIMARY KEY,

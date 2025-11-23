@@ -5,9 +5,10 @@ import { createProduct, getProducts } from '../services/productService';
 
 const router = Router();
 
-router.get('/', authenticate, async (_req, res, next) => {
+router.get('/', authenticate, async (req, res, next) => {
   try {
-    const products = await getProducts();
+    const userId = req.user?.userId;
+    const products = await getProducts(userId);
     res.json(products);
   } catch (error) {
     next(error);
@@ -31,7 +32,8 @@ const createSchema = z.object({
 router.post('/', authenticate, async (req, res, next) => {
   try {
     const payload = createSchema.parse(req.body);
-    const product = await createProduct(payload);
+    const userId = req.user?.userId;
+    const product = await createProduct(payload, userId);
     res.status(201).json(product);
   } catch (error) {
     next(error);

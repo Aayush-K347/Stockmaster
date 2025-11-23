@@ -17,7 +17,9 @@ export interface CreateProductInput {
   initialQuantity?: number;
 }
 
-export const getProducts = async (): Promise<Product[]> => {
+export const getProducts = async (userId?: number): Promise<Product[]> => {
+  if (!userId) throw new HttpError(401, 'Unauthenticated');
+
   const [rows] = await pool.query(
     `SELECT p.id,
             p.name,
@@ -36,8 +38,10 @@ export const getProducts = async (): Promise<Product[]> => {
      LEFT JOIN inventory_uom u ON u.id = p.uom_id
      LEFT JOIN inventory_stockquant q ON q.product_id = p.id
      LEFT JOIN inventory_location dl ON dl.id = p.default_location_id
+     WHERE p.created_by = ?
      GROUP BY p.id, p.name, p.sku, pc.name, u.code, p.min_stock, p.max_stock, p.price, p.barcode, p.qc_status, dl.code
-     ORDER BY p.id DESC`
+     ORDER BY p.id DESC`,
+    [userId]
   );
 
   return (rows as any[]).map((row) => ({
@@ -56,7 +60,9 @@ export const getProducts = async (): Promise<Product[]> => {
   }));
 };
 
-export const createProduct = async (input: CreateProductInput): Promise<Product> => {
+export const createProduct = async (input: CreateProductInput, userId?: number): Promise<Product> => {
+  if (!userId) throw new HttpError(401, 'Unauthenticated');
+
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -87,9 +93,9 @@ export const createProduct = async (input: CreateProductInput): Promise<Product>
     }
 
     const [result] = await conn.execute(
-      `INSERT INTO inventory_product 
-        (name, sku, category_id, uom_id, min_stock, max_stock, price, default_location_id, qc_status, barcode) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO inventory_product
+        (name, sku, category_id, uom_id, min_stock, max_stock, price, default_location_id, qc_status, barcode, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         input.name,
         input.sku,
@@ -101,6 +107,7 @@ export const createProduct = async (input: CreateProductInput): Promise<Product>
         locationId,
         input.qcStatus ?? 'PENDING',
         input.barcode ?? null,
+        userId,
       ]
     );
 
