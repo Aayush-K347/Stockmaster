@@ -163,7 +163,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
               {error && <p className="text-sm text-red-400 text-center">{error}</p>}
               {resetRequested && (
                 <p className="text-sm text-green-400 text-center">
-                  Check your email for the password reset OTP link.
+                  Check your email for the password reset OTP link.Check SPAM folder if not found in inbox.
                 </p>
               )}
 
