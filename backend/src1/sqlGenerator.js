@@ -89,12 +89,85 @@ function validateAndCleanSQL(rawResponse) {
   return sql;
 }
 
+const TABLE_SCOPE_COLUMNS = {
+  inventory_stockmove: 'user_id',
+  inventory_stockvaluationlayer: 'user_id',
+  inventory_user_groups: 'user_id',
+  inventory_user_user_permissions: 'user_id'
+};
+
+function findScopedTables(sql) {
+  const matches = sql.match(/\binventory_[a-z_]+\b/gi) || [];
+  return [...new Set(matches.map(t => t.toLowerCase()))];
+}
+
+function detectExistingScope(sql, userId) {
+  const userPattern = new RegExp(`\b(user_id|created_by)\s*=\s*${userId}\b`, 'i');
+  return userPattern.test(sql);
+}
+
+function buildScopeCondition(sql, scopedTables, userId) {
+  const conditions = [];
+
+  for (const table of scopedTables) {
+    const scopeColumn = TABLE_SCOPE_COLUMNS[table];
+    if (!scopeColumn) continue;
+
+    const aliasMatch = sql.match(new RegExp(`${table}\\s+(?:AS\\s+)?([\\w]+)`, 'i'));
+    const qualifier = aliasMatch?.[1] || table;
+    conditions.push(`${qualifier}.${scopeColumn} = ${userId}`);
+  }
+
+  return conditions.join(' AND ');
+}
+
+function injectScopeCondition(sql, condition) {
+  if (!condition) return sql;
+
+  if (/\bwhere\b/i.test(sql)) {
+    return sql.replace(/\bwhere\b/i, match => `${match} ${condition} AND `);
+  }
+
+  const lowerSQL = sql.toLowerCase();
+  const specialIdx = [
+    lowerSQL.search(/\bgroup\s+by\b/),
+    lowerSQL.search(/\border\s+by\b/),
+    lowerSQL.search(/\blimit\b/)
+  ].filter(idx => idx >= 0);
+
+  if (specialIdx.length > 0) {
+    const insertAt = Math.min(...specialIdx);
+    return `${sql.slice(0, insertAt)} WHERE ${condition} ${sql.slice(insertAt)}`;
+  }
+
+  return `${sql} WHERE ${condition}`;
+}
+
 function ensureUserScope(sql, userId) {
-  const userPattern = new RegExp(`(user_id|created_by)\\s*=\\s*${userId}\\b`, 'i');
-  if (!userPattern.test(sql)) {
+  if (detectExistingScope(sql, userId)) {
+    return sql;
+  }
+
+  const scopedTables = findScopedTables(sql).filter(table => TABLE_SCOPE_COLUMNS[table]);
+
+  // If the query only touches tables without scoping columns, allow it as-is.
+  if (scopedTables.length === 0) {
+    return sql;
+  }
+
+  const condition = buildScopeCondition(sql, scopedTables, userId);
+
+  if (!condition) {
+    throw new Error('Unable to enforce user scope for the requested tables.');
+  }
+
+  const scopedSQL = injectScopeCondition(sql, condition);
+
+  if (!detectExistingScope(scopedSQL, userId)) {
     throw new Error('Generated SQL must be scoped to the current user.');
   }
-  return sql;
+
+  return scopedSQL;
 }
 
 export async function generateSQL(question, userId, retries = 2) {
