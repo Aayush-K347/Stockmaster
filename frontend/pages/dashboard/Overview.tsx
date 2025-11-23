@@ -32,17 +32,34 @@ export default function Overview() {
     // Open the dashboard immediately in a new tab to avoid popup blockers.
     // Then trigger the analysis API in the background.
     const dashboardUrl = 'http://127.0.0.1:8080/dashboard';
+    const generatorEndpoints = [
+      'http://127.0.0.1:5000/api/forecast/generate',
+      'https://focused-celebration-production.up.railway.app/api/forecast/generate'
+    ];
+
     try {
       const newWin = window.open(dashboardUrl, '_blank', 'noopener,noreferrer');
 
-      // Fire-and-forget the generate endpoint; report status to the UI.
-      const apiUrl = 'http://127.0.0.1:8080/dashboard';
-      const res = await fetch(apiUrl, { method: 'POST' });
-      if (!res.ok) {
-        const message = await res.text();
-        throw new Error(message || 'Failed to start demand analysis');
+      // Fire-and-forget the generate endpoint; try local first, then fall back to the deployed service.
+      let lastError: Error | null = null;
+      for (const apiUrl of generatorEndpoints) {
+        try {
+          const res = await fetch(apiUrl, { method: 'POST' });
+          if (!res.ok) {
+            const message = await res.text();
+            throw new Error(message || 'Failed to start demand analysis');
+          }
+          setAnalysisStatus('Demand analysis completed successfully.');
+          lastError = null;
+          break;
+        } catch (err: any) {
+          lastError = err;
+        }
       }
-      setAnalysisStatus('Demand analysis completed successfully.');
+
+      if (lastError) {
+        throw lastError;
+      }
 
       // If the new window was opened to about:blank or similar, ensure it points to dashboard.
       if (newWin && !newWin.closed) {
