@@ -26,17 +26,19 @@ export default function DashboardPage({ onLogout }: { onLogout: () => void }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { logout } = useAuth();
 
-  const NavItem = ({ icon: Icon, label, active, onClick }: any) => (
-    <button 
+  const NavItem = ({ icon: Icon, label, active, onClick, showLabel }: any) => (
+    <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 px-4 py-2.5 mb-1 text-sm font-medium transition-all rounded-r-full border-l-2 ${
-        active 
-        ? 'bg-gradient-to-r from-primary/20 to-transparent border-primary text-white shadow-[0_0_15px_-5px_rgba(109,40,217,0.5)]' 
+      className={`w-full flex items-center ${showLabel ? 'gap-3 justify-start' : 'gap-0 justify-center'} px-4 py-2.5 mb-1 text-sm font-medium transition-all rounded-r-full border-l-2 ${
+        active
+        ? 'bg-gradient-to-r from-primary/20 to-transparent border-primary text-white shadow-[0_0_15px_-5px_rgba(109,40,217,0.5)]'
         : 'border-transparent text-gray-400 hover:text-white hover:bg-white/5'
       }`}
+      aria-label={label}
     >
-      <Icon size={18} className={active ? 'text-primary' : 'text-gray-500'} />
-      {label}
+      <Icon size={18} className={`${active ? 'text-primary' : 'text-gray-500'} ${showLabel ? '' : 'mx-auto'}`} />
+      {showLabel && <span>{label}</span>}
+      {!showLabel && <span className="sr-only">{label}</span>}
     </button>
   );
 
@@ -56,20 +58,20 @@ export default function DashboardPage({ onLogout }: { onLogout: () => void }) {
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar px-0 pb-6">
-           <SectionLabel label={isSidebarOpen ? 'Main' : '...'} />
-           <NavItem icon={LayoutDashboard} label="Dashboard" active={view === ViewState.DASHBOARD} onClick={() => setView(ViewState.DASHBOARD)} />
-           <NavItem icon={Package} label="Products" active={view === ViewState.PRODUCTS} onClick={() => setView(ViewState.PRODUCTS)} />
-           
-           <SectionLabel label={isSidebarOpen ? 'Operations' : '...'} />
-           <NavItem icon={ArrowDownLeft} label="Receipts" active={view === ViewState.OPERATIONS_RECEIPTS} onClick={() => setView(ViewState.OPERATIONS_RECEIPTS)} />
-           <NavItem icon={ArrowUpRight} label="Deliveries" active={view === ViewState.OPERATIONS_DELIVERIES} onClick={() => setView(ViewState.OPERATIONS_DELIVERIES)} />
-           <NavItem icon={ArrowRightLeft} label="Internal Transfers" active={view === ViewState.OPERATIONS_INTERNAL} onClick={() => setView(ViewState.OPERATIONS_INTERNAL)} />
-           <NavItem icon={TrendingUp} label="Adjustments" active={view === ViewState.OPERATIONS_ADJUSTMENTS} onClick={() => setView(ViewState.OPERATIONS_ADJUSTMENTS)} />
-           
-           <SectionLabel label={isSidebarOpen ? 'Intelligence' : '...'} />
-           <NavItem icon={ClipboardList} label="Stock Ledger" active={view === ViewState.STOCK_LEDGER} onClick={() => setView(ViewState.STOCK_LEDGER)} />
-           <NavItem icon={Zap} label="Inventory Bot" active={view === ViewState.QUANTUM_INVENTORY} onClick={() => setView(ViewState.QUANTUM_INVENTORY)} />
-           <NavItem icon={Map} label="Settings" active={view === ViewState.SETTINGS} onClick={() => setView(ViewState.SETTINGS)} />
+           {isSidebarOpen && <SectionLabel label="Main" />}
+           <NavItem icon={LayoutDashboard} label="Dashboard" active={view === ViewState.DASHBOARD} onClick={() => setView(ViewState.DASHBOARD)} showLabel={isSidebarOpen} />
+           <NavItem icon={Package} label="Products" active={view === ViewState.PRODUCTS} onClick={() => setView(ViewState.PRODUCTS)} showLabel={isSidebarOpen} />
+
+           {isSidebarOpen && <SectionLabel label="Operations" />}
+           <NavItem icon={ArrowDownLeft} label="Receipts" active={view === ViewState.OPERATIONS_RECEIPTS} onClick={() => setView(ViewState.OPERATIONS_RECEIPTS)} showLabel={isSidebarOpen} />
+           <NavItem icon={ArrowUpRight} label="Deliveries" active={view === ViewState.OPERATIONS_DELIVERIES} onClick={() => setView(ViewState.OPERATIONS_DELIVERIES)} showLabel={isSidebarOpen} />
+           <NavItem icon={ArrowRightLeft} label="Internal Transfers" active={view === ViewState.OPERATIONS_INTERNAL} onClick={() => setView(ViewState.OPERATIONS_INTERNAL)} showLabel={isSidebarOpen} />
+           <NavItem icon={TrendingUp} label="Adjustments" active={view === ViewState.OPERATIONS_ADJUSTMENTS} onClick={() => setView(ViewState.OPERATIONS_ADJUSTMENTS)} showLabel={isSidebarOpen} />
+
+           {isSidebarOpen && <SectionLabel label="Intelligence" />}
+           <NavItem icon={ClipboardList} label="Stock Ledger" active={view === ViewState.STOCK_LEDGER} onClick={() => setView(ViewState.STOCK_LEDGER)} showLabel={isSidebarOpen} />
+           <NavItem icon={Zap} label="Inventory Bot" active={view === ViewState.QUANTUM_INVENTORY} onClick={() => setView(ViewState.QUANTUM_INVENTORY)} showLabel={isSidebarOpen} />
+           <NavItem icon={Map} label="Settings" active={view === ViewState.SETTINGS} onClick={() => setView(ViewState.SETTINGS)} showLabel={isSidebarOpen} />
         </div>
 
         <div className="p-4 mt-auto border-t border-white/5">
