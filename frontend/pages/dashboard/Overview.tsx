@@ -29,13 +29,29 @@ export default function Overview() {
     setAnalysisStatus(null);
     setIsRunningAnalysis(true);
 
-    // Open the dashboard immediately in a new tab to avoid popup blockers.
-    // Then trigger the analysis API in the background.
-    const dashboardUrl = 'https://focused-celebration-production.up.railway.app/dashboard';
-    const generatorEndpoints = [
-      'http://127.0.0.1:5000/api/forecast/generate',
-      'https://focused-celebration-production.up.railway.app/api/forecast/generate'
-    ];
+    const hostedBaseUrl = 'https://focused-celebration-production.up.railway.app';
+    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+    const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+    const isLocalHost = ['localhost', '127.0.0.1'].includes(hostname);
+    const isRailwayOrigin = currentOrigin.includes('.railway.app');
+
+    // Prefer the current deployed origin when on Railway, otherwise fall back to the hosted base or local dev.
+    const dashboardBase = isRailwayOrigin
+      ? currentOrigin
+      : isLocalHost
+        ? 'http://127.0.0.1:8080'
+        : hostedBaseUrl;
+    const dashboardUrl = `${dashboardBase.replace(/\/$/, '')}/dashboard`;
+
+    // Try the most contextually relevant forecast endpoint first, with a hosted fallback to avoid local-only failures.
+    const generatorEndpoints = [] as string[];
+    if (isRailwayOrigin) {
+      generatorEndpoints.push(`${dashboardBase.replace(/\/$/, '')}/api/forecast/generate`);
+    }
+    if (isLocalHost) {
+      generatorEndpoints.push('http://127.0.0.1:5000/api/forecast/generate');
+    }
+    generatorEndpoints.push(`${hostedBaseUrl}/api/forecast/generate`);
 
     try {
       const newWin = window.open(dashboardUrl, '_blank', 'noopener,noreferrer');
