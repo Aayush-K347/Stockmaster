@@ -5,7 +5,7 @@ dotenv.config();
 export const config = {
   gemini: {
     // Fallback to the provided key so local runs work even if .env is missing
-    apiKey: process.env.GEMINI_API_KEY || 'AIzaSyCa5xfG486cy_rSOdLU_BVNJfK_EQDjc_o',
+    apiKey: process.env.GEMINI_API_KEY || 'AIzaSyBqXXU1q5975rqZEq4-zvwKsdicf2ZnOo8',
     model: process.env.GEMINI_MODEL || 'gemini-2.5-flash'
   },
   db: {
