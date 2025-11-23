@@ -190,19 +190,6 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
                 >
                   Sign Up
                 </button>
-                <button
-                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                    mode === 'reset' ? 'bg-primary text-white' : 'text-gray-300'
-                  }`}
-                  onClick={() => {
-                    setMode('reset');
-                    setResetStep('request');
-                    setResetRequested(false);
-                    setError(null);
-                  }}
-                >
-                  Reset
-                </button>
               </div>
             </div>
 
