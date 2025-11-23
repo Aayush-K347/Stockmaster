@@ -1,6 +1,7 @@
-pandas 
-prophet 
-sqlalchemy 
+pandas
+prophet
+sqlalchemy
 pymysql
 flask
+flask-cors
 cryptography

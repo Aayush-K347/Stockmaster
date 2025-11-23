@@ -1,9 +1,19 @@
 from flask import Flask, jsonify, render_template, request
+from flask_cors import CORS
 from sqlalchemy import create_engine, text
 from services.forecasting import DemandForecaster
 import uuid
 
 app = Flask(__name__)
+CORS(
+    app,
+    origins=[
+        "https://stockmaster-red.vercel.app",
+        "http://localhost:5173",
+    ],
+    methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+)
 
 # ✅ Correct Railway MySQL connection string
 DB_URI = "mysql+pymysql://root:jFXtFCQQRDxrresXmuhSLwFRtAbrOmBo@interchange.proxy.rlwy.net:19580/railway"
