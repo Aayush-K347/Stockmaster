@@ -2,10 +2,11 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const geminiApiKey = process.env.GEMINI_API_KEY || process.env.RAILWAY_GEMINI_API_KEY;
+
 export const config = {
   gemini: {
-    // Fallback to the provided key so local runs work even if .env is missing
-    apiKey: process.env.GEMINI_API_KEY || 'AIzaSyBqXXU1q5975rqZEq4-zvwKsdicf2ZnOo8',
+    apiKey: geminiApiKey,
     // Model is pinned to the supported default to avoid 404s from deprecated names
     model: 'gemini-2.5-flash'
   },
@@ -26,7 +27,7 @@ export const config = {
 
 // Validate API key exists
 if (!config.gemini.apiKey) {
-  console.error('❌ GEMINI_API_KEY not found in .env');
+  console.error('❌ GEMINI_API_KEY not found. Set it in your environment (e.g., Railway variable).');
   console.error('Get your API key from: https://makersuite.google.com/app/apikey');
   process.exit(1);
 }
