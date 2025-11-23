@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { Product, Operation, StockLedgerEntry } from '../types';
 import { MOCK_PRODUCTS, MOCK_OPERATIONS, MOCK_LEDGER } from '../constants';
 import { useAuth } from './AuthContext';
@@ -15,10 +15,42 @@ interface StoreContextType {
   deleteOperation: (id: string) => void;
 }
 
+type SessionSnapshot = {
+  products: Product[];
+  operations: Operation[];
+  ledger: StockLedgerEntry[];
+};
+
+const SESSION_STORAGE_PREFIX = 'stockmaster:session';
+
+const readSessionSnapshot = (key: string): SessionSnapshot | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as SessionSnapshot) : null;
+  } catch (error) {
+    console.warn('Failed to read session snapshot', error);
+    return null;
+  }
+};
+
+const writeSessionSnapshot = (key: string, data: SessionSnapshot) => {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(key, JSON.stringify(data));
+  } catch (error) {
+    console.warn('Failed to persist session snapshot', error);
+  }
+};
+
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export const StoreProvider = ({ children }: { children?: ReactNode }) => {
-  const { apiFetch, isSignedIn } = useAuth();
+  const { apiFetch, isSignedIn, user } = useAuth();
+  const sessionKey = useMemo(
+    () => `${SESSION_STORAGE_PREFIX}:${isSignedIn && user?.email ? user.email : 'guest'}`,
+    [isSignedIn, user?.email]
+  );
   const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
   const [operations, setOperations] = useState<Operation[]>(MOCK_OPERATIONS);
   const [ledger, setLedger] = useState<StockLedgerEntry[]>(MOCK_LEDGER);
@@ -92,14 +124,26 @@ export const StoreProvider = ({ children }: { children?: ReactNode }) => {
 
   useEffect(() => {
     if (!apiReady) {
-      setProducts(MOCK_PRODUCTS);
-      setOperations(MOCK_OPERATIONS);
-      setLedger(MOCK_LEDGER);
+      const snapshot = readSessionSnapshot(sessionKey);
+      if (snapshot) {
+        setProducts(snapshot.products);
+        setOperations(snapshot.operations);
+        setLedger(snapshot.ledger);
+      } else {
+        setProducts(MOCK_PRODUCTS);
+        setOperations(MOCK_OPERATIONS);
+        setLedger(MOCK_LEDGER);
+      }
       return;
     }
     loadFromApi();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiReady]);
+  }, [apiReady, sessionKey]);
+
+  useEffect(() => {
+    if (apiReady) return;
+    writeSessionSnapshot(sessionKey, { products, operations, ledger });
+  }, [apiReady, ledger, operations, products, sessionKey]);
 
   const addProduct = (product: Product) => {
     setProducts(prev => [product, ...prev]);
