@@ -14,6 +14,8 @@ interface QueryResult {
   meta?: any;
 }
 
+const API_BASE_URL = "https://satisfied-prosperity-production.up.railway.app";
+
 const QuantumInventory = () => {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
@@ -34,7 +36,7 @@ const QuantumInventory = () => {
     // Check backend connection
     const checkConnection = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/health");
+        const response = await fetch(`${API_BASE_URL}/api/health`);
         setConnectionStatus(response.ok ? "connected" : "disconnected");
       } catch {
         setConnectionStatus("disconnected");
@@ -53,7 +55,7 @@ const QuantumInventory = () => {
     setResult(null);
 
     try {
-      const response = await fetch("http://localhost:5000/api/query", {
+      const response = await fetch(`${API_BASE_URL}/api/query`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question }),
@@ -87,7 +89,7 @@ const QuantumInventory = () => {
         success: false,
         question,
         sql: "",
-        answer: "Failed to connect to backend. Make sure the server is running on http://localhost:5000",
+        answer: "Failed to connect to backend. Make sure the server is running at https://satisfied-prosperity-production.up.railway.app",
         data: [],
         rowCount: 0,
       });
