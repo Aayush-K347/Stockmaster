@@ -17,6 +17,51 @@ export interface CreateProductInput {
   initialQuantity?: number;
 }
 
+const demoProducts: Product[] = [
+  {
+    id: 1001,
+    name: 'Demo Widget',
+    sku: 'DW-001',
+    category: 'Demo Items',
+    uom: 'PCS',
+    quantity: 120,
+    minStock: 20,
+    maxStock: 500,
+    price: 18.5,
+    location: 'MAIN',
+    barcode: '000001',
+    qcStatus: 'PASS',
+  },
+  {
+    id: 1002,
+    name: 'Sample Cable',
+    sku: 'SC-010',
+    category: 'Accessories',
+    uom: 'MTR',
+    quantity: 320,
+    minStock: 50,
+    maxStock: 800,
+    price: 2.75,
+    location: 'MAIN',
+    barcode: '000002',
+    qcStatus: 'PASS',
+  },
+  {
+    id: 1003,
+    name: 'Calibration Kit',
+    sku: 'CK-500',
+    category: 'Maintenance',
+    uom: 'KIT',
+    quantity: 16,
+    minStock: 5,
+    maxStock: 40,
+    price: 95,
+    location: 'QUARANTINE',
+    barcode: '000003',
+    qcStatus: 'PENDING',
+  },
+];
+
 export const getProducts = async (userId?: number): Promise<Product[]> => {
   if (!userId) throw new HttpError(401, 'Unauthenticated');
 
@@ -44,7 +89,12 @@ export const getProducts = async (userId?: number): Promise<Product[]> => {
     [userId]
   );
 
-  return (rows as any[]).map((row) => ({
+  const typedRows = rows as any[];
+  if (!typedRows.length) {
+    return demoProducts;
+  }
+
+  return typedRows.map((row) => ({
     id: row.id,
     name: row.name,
     sku: row.sku,
