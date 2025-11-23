@@ -31,7 +31,7 @@ export default function Overview() {
 
     // Open the dashboard immediately in a new tab to avoid popup blockers.
     // Then trigger the analysis API in the background.
-    const dashboardUrl = 'http://127.0.0.1:8080/dashboard';
+    const dashboardUrl = 'https://focused-celebration-production.up.railway.app/dashboard';
     const generatorEndpoints = [
       'http://127.0.0.1:5000/api/forecast/generate',
       'https://focused-celebration-production.up.railway.app/api/forecast/generate'
