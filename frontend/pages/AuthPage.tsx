@@ -20,15 +20,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
-  const {
-    login,
-    signup,
-    resetPassword,
-    verifyResetOtp,
-    verifyResetCode,
-    confirmPasswordReset,
-    isSignedIn,
-  } = useAuth();
+  const { login, signup, resetPassword, verifyResetCode, confirmPasswordReset, isSignedIn } = useAuth();
 
   const headerCopy = useMemo(() => {
     if (mode === 'reset') return { title: 'Reset your password', subtitle: 'Secure OTP-based reset via your email.' };
@@ -108,10 +100,6 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
       setError('Enter the OTP code from your email.');
       return;
     }
-    if (!email) {
-      setError('Enter the account email used to request the reset.');
-      return;
-    }
     if (!newPassword || newPassword.length < 6) {
       setError('Password must be at least 6 characters long.');
       return;
@@ -124,15 +112,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
     setLoading(true);
     setError(null);
     try {
-      let resetCode = oobCode;
-      // If the code looks like a short OTP, exchange it for the Firebase reset code
-      if (/^\d{6}$/.test(oobCode)) {
-        resetCode = await verifyResetOtp(email, oobCode);
-        setOobCode(resetCode);
-        setVerifiedEmail(email);
-      }
-
-      await confirmPasswordReset(resetCode, newPassword);
+      await confirmPasswordReset(oobCode, newPassword);
       setResetRequested(false);
       setNewPassword('');
       setConfirmNewPassword('');
@@ -189,6 +169,19 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
                   onClick={() => setMode('signUp')}
                 >
                   Sign Up
+                </button>
+                <button
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                    mode === 'reset' ? 'bg-primary text-white' : 'text-gray-300'
+                  }`}
+                  onClick={() => {
+                    setMode('reset');
+                    setResetStep('request');
+                    setResetRequested(false);
+                    setError(null);
+                  }}
+                >
+                  Reset
                 </button>
               </div>
             </div>
@@ -375,7 +368,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
                 {error && <p className="text-sm text-red-400 text-center">{error}</p>}
                 {resetRequested && (
                   <p className="text-sm text-green-400 text-center">
-                    Check your email for the password reset OTP code.
+                    Check your email for the password reset OTP link.
                   </p>
                 )}
               </div>
