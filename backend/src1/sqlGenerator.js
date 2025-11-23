@@ -8,7 +8,8 @@ import { systemPrompt } from './schema.js';
 const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
 
 // Only use the supported default model; avoid deprecated names that 404.
-const MODEL_NAME = config.gemini.model;
+const MODEL_FALLBACKS = [config.gemini.model];
+const MODEL_NAME = MODEL_FALLBACKS[0];
 
 // Validate that response is proper SQL
 function validateAndCleanSQL(rawResponse) {
