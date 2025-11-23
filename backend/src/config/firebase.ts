@@ -10,3 +10,4 @@ const app = admin.initializeApp({
 });
 
 export const firebaseAuth = app.auth();
+export const firestore = app.firestore();

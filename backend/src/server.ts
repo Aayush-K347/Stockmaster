@@ -12,6 +12,7 @@ import { productRouter } from './routes/products';
 import { operationsRouter } from './routes/operations';
 import { ledgerRouter } from './routes/ledger';
 import { warehouseRouter } from './routes/warehouse';
+import { passwordResetRouter } from './routes/passwordReset';
 import { testConnection } from './config/database';
 
 const app = express();
@@ -50,6 +51,7 @@ app.get('/health', async (_req, res, next) => {
 });
 
 app.use('/api/auth', authRouter);
+app.use('/api/password-reset', passwordResetRouter);
 app.use('/api/products', productRouter);
 app.use('/api/operations', operationsRouter);
 app.use('/api/ledger', ledgerRouter);

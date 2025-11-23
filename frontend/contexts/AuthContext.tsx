@@ -3,7 +3,6 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
   verifyPasswordResetCode,
   confirmPasswordReset as firebaseConfirmPasswordReset,
 } from 'firebase/auth';
@@ -25,6 +24,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  verifyResetOtp: (email: string, otp: string) => Promise<string>;
   verifyResetCode: (oobCode: string) => Promise<string>;
   confirmPasswordReset: (oobCode: string, newPassword: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -132,11 +132,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const resetPassword = async (email: string) => {
-    const actionCodeSettings = {
-      url: `${window.location.origin}?reset=1`,
-      handleCodeInApp: true,
-    };
-    await sendPasswordResetEmail(firebaseAuth, email, actionCodeSettings);
+    await apiFetch('/password-reset/request', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  };
+
+  const verifyResetOtp = async (email: string, otp: string) => {
+    const result = await apiFetch<{ oobCode: string }>('/password-reset/verify', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp }),
+    });
+    return result.oobCode;
   };
 
   const verifyResetCode = async (oobCode: string) => {
@@ -171,6 +178,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         login,
         signup,
         resetPassword,
+        verifyResetOtp,
         verifyResetCode,
         confirmPasswordReset,
         logout,
