@@ -20,7 +20,15 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
-  const { login, signup, resetPassword, verifyResetCode, confirmPasswordReset, isSignedIn } = useAuth();
+  const {
+    login,
+    signup,
+    resetPassword,
+    verifyResetOtp,
+    verifyResetCode,
+    confirmPasswordReset,
+    isSignedIn,
+  } = useAuth();
 
   const headerCopy = useMemo(() => {
     if (mode === 'reset') return { title: 'Reset your password', subtitle: 'Secure OTP-based reset via your email.' };
@@ -100,6 +108,10 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
       setError('Enter the OTP code from your email.');
       return;
     }
+    if (!email) {
+      setError('Enter the account email used to request the reset.');
+      return;
+    }
     if (!newPassword || newPassword.length < 6) {
       setError('Password must be at least 6 characters long.');
       return;
@@ -112,7 +124,15 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
     setLoading(true);
     setError(null);
     try {
-      await confirmPasswordReset(oobCode, newPassword);
+      let resetCode = oobCode;
+      // If the code looks like a short OTP, exchange it for the Firebase reset code
+      if (/^\d{6}$/.test(oobCode)) {
+        resetCode = await verifyResetOtp(email, oobCode);
+        setOobCode(resetCode);
+        setVerifiedEmail(email);
+      }
+
+      await confirmPasswordReset(resetCode, newPassword);
       setResetRequested(false);
       setNewPassword('');
       setConfirmNewPassword('');
@@ -368,7 +388,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
                 {error && <p className="text-sm text-red-400 text-center">{error}</p>}
                 {resetRequested && (
                   <p className="text-sm text-green-400 text-center">
-                    Check your email for the password reset OTP link.
+                    Check your email for the password reset OTP code.
                   </p>
                 )}
               </div>
