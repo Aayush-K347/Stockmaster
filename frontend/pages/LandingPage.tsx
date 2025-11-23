@@ -47,8 +47,8 @@ export default function LandingPage({ onNavigateToLogin }: { onNavigateToLogin: 
         {/* Background Image */}
         <div 
           className="absolute inset-0 bg-cover bg-no-repeat opacity-40"
-          style={{ 
-            backgroundImage: "url('/pages/background/stockMaster.png')",
+          style={{
+            backgroundImage: "url('/background/stockMaster.png')",
             backgroundPosition: "center calc(80% + 200px)"
           }}
         />
@@ -153,7 +153,7 @@ export default function LandingPage({ onNavigateToLogin }: { onNavigateToLogin: 
       <section className="relative px-6 py-16 overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-50"
-          style={{ backgroundImage: "url('/pages/background/floating_element.png')" }}
+          style={{ backgroundImage: "url('/background/floating_element.png')" }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#02010A] via-transparent to-transparent" />
         <div className="max-w-6xl mx-auto relative z-10">
