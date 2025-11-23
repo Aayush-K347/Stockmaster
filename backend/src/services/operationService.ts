@@ -31,6 +31,70 @@ const buildOperationFromRows = (rows: any[]): Operation => {
   };
 };
 
+const demoOperations: Operation[] = [
+  {
+    id: 5001,
+    type: 'RECEIPT',
+    reference: 'RCT-0001',
+    contact: 'Acme Supplies',
+    responsible: 'System',
+    status: 'DONE',
+    destLocation: 'MAIN',
+    scheduledDate: new Date().toISOString(),
+    notes: 'Initial demo receipt',
+    version: 1,
+    createdAt: new Date().toISOString(),
+    items: [
+      {
+        productId: 1001,
+        productName: 'Demo Widget',
+        quantity: 30,
+      },
+    ],
+  },
+  {
+    id: 5002,
+    type: 'INTERNAL',
+    reference: 'INT-0001',
+    contact: 'System Transfer',
+    responsible: 'System',
+    status: 'DONE',
+    sourceLocation: 'MAIN',
+    destLocation: 'SECONDARY',
+    scheduledDate: new Date().toISOString(),
+    notes: 'Demo internal transfer',
+    version: 1,
+    createdAt: new Date().toISOString(),
+    items: [
+      {
+        productId: 1002,
+        productName: 'Sample Cable',
+        quantity: 50,
+      },
+    ],
+  },
+  {
+    id: 5003,
+    type: 'ADJUSTMENT',
+    reference: 'ADJ-0001',
+    contact: 'System Adjustment',
+    responsible: 'System',
+    status: 'DONE',
+    destLocation: 'QUARANTINE',
+    scheduledDate: new Date().toISOString(),
+    notes: 'Demo stock adjustment',
+    version: 1,
+    createdAt: new Date().toISOString(),
+    items: [
+      {
+        productId: 1003,
+        productName: 'Calibration Kit',
+        quantity: 2,
+      },
+    ],
+  },
+];
+
 export const getOperations = async (userId?: number): Promise<Operation[]> => {
   if (!userId) throw new HttpError(401, 'Unauthenticated');
 
@@ -62,8 +126,13 @@ export const getOperations = async (userId?: number): Promise<Operation[]> => {
     [userId]
   );
 
+  const typedRows = rows as any[];
+  if (!typedRows.length) {
+    return demoOperations;
+  }
+
   const grouped = new Map<number, any[]>();
-  (rows as any[]).forEach((row) => {
+  typedRows.forEach((row) => {
     if (!grouped.has(row.id)) grouped.set(row.id, []);
     grouped.get(row.id)!.push(row);
   });
