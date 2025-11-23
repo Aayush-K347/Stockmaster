@@ -32,7 +32,7 @@
    PORT=5000
    ```
 
-   > ℹ️ A default Gemini API key and the `gemini-2.5-flash` model are configured in `config.js` so the service can start immediately. Override them in your `.env` to use your own credentials and model preference via `GEMINI_API_KEY` and `GEMINI_MODEL`.
+   > ℹ️ A Gemini API key is required and must be set via `GEMINI_API_KEY` (e.g., in your Railway environment). The default model is `gemini-2.5-flash`; override it with `GEMINI_MODEL` if needed.
 
 4. **Start the server**
    ```bash
