@@ -31,7 +31,9 @@ const buildOperationFromRows = (rows: any[]): Operation => {
   };
 };
 
-export const getOperations = async (): Promise<Operation[]> => {
+export const getOperations = async (userId?: number): Promise<Operation[]> => {
+  if (!userId) throw new HttpError(401, 'Unauthenticated');
+
   const [rows] = await pool.query(
     `SELECT sm.id,
             sm.type,
@@ -54,7 +56,9 @@ export const getOperations = async (): Promise<Operation[]> => {
      LEFT JOIN inventory_product p ON p.id = st.product_id
      LEFT JOIN inventory_location src ON src.id = sm.source_location_id
      LEFT JOIN inventory_location dest ON dest.id = sm.dest_location_id
-     ORDER BY sm.created_at DESC`
+     WHERE sm.user_id = ?
+     ORDER BY sm.created_at DESC`,
+    [userId]
   );
 
   const grouped = new Map<number, any[]>();
@@ -89,7 +93,9 @@ export interface CreateOperationInput {
   status?: OperationStatus;
 }
 
-export const createOperation = async (input: CreateOperationInput): Promise<Operation> => {
+export const createOperation = async (input: CreateOperationInput, userId?: number): Promise<Operation> => {
+  if (!userId) throw new HttpError(401, 'Unauthenticated');
+
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -98,9 +104,9 @@ export const createOperation = async (input: CreateOperationInput): Promise<Oper
     const destLocationId = await resolveLocationId(input.destLocation, conn);
 
     const [result] = await conn.execute(
-      `INSERT INTO inventory_stockmove 
-         (type, reference, contact, responsible, status, source_location_id, dest_location_id, scheduled_date, notes, version, created_at) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())`,
+      `INSERT INTO inventory_stockmove
+         (type, reference, contact, responsible, status, source_location_id, dest_location_id, scheduled_date, notes, version, user_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NOW())`,
       [
         input.type,
         input.reference,
@@ -111,6 +117,7 @@ export const createOperation = async (input: CreateOperationInput): Promise<Oper
         destLocationId,
         input.scheduledDate,
         input.notes ?? null,
+        userId,
       ]
     );
 
@@ -137,6 +144,7 @@ export const createOperation = async (input: CreateOperationInput): Promise<Oper
       scheduledDate: input.scheduledDate,
       notes: input.notes,
       version: 1,
+      lastEditedBy: undefined,
       items: input.items.map((it) => ({
         productId: it.productId,
         productName: '',
@@ -151,12 +159,14 @@ export const createOperation = async (input: CreateOperationInput): Promise<Oper
   }
 };
 
-export const updateOperationData = async (id: number, updates: Partial<CreateOperationInput>): Promise<void> => {
+export const updateOperationData = async (id: number, updates: Partial<CreateOperationInput>, userId?: number): Promise<void> => {
+  if (!userId) throw new HttpError(401, 'Unauthenticated');
+
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
 
-    const [existing] = await conn.query(`SELECT id FROM inventory_stockmove WHERE id = ? FOR UPDATE`, [id]);
+    const [existing] = await conn.query(`SELECT id FROM inventory_stockmove WHERE id = ? AND user_id = ? FOR UPDATE`, [id, userId]);
     if (!(existing as any[])[0]) throw new HttpError(404, 'Operation not found');
 
     const sourceLocationId =
@@ -167,7 +177,7 @@ export const updateOperationData = async (id: number, updates: Partial<CreateOpe
       updates.destLocation !== undefined ? await resolveLocationId(updates.destLocation, conn) : undefined;
 
     await conn.execute(
-      `UPDATE inventory_stockmove 
+      `UPDATE inventory_stockmove
        SET contact = COALESCE(?, contact),
            responsible = COALESCE(?, responsible),
            scheduled_date = COALESCE(?, scheduled_date),
@@ -177,7 +187,7 @@ export const updateOperationData = async (id: number, updates: Partial<CreateOpe
            dest_location_id = COALESCE(?, dest_location_id),
            updated_at = NOW(),
            version = COALESCE(version, 1) + 1
-       WHERE id = ?`,
+       WHERE id = ? AND user_id = ?`,
       [
         updates.contact ?? null,
         updates.responsible ?? null,
@@ -187,6 +197,7 @@ export const updateOperationData = async (id: number, updates: Partial<CreateOpe
         sourceLocationId ?? null,
         destLocationId ?? null,
         id,
+        userId,
       ]
     );
 
@@ -262,14 +273,15 @@ export const updateOperationStatus = async (
   actor?: string,
   userId?: number
 ): Promise<void> => {
+  if (!userId) throw new HttpError(401, 'Unauthenticated');
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
 
     const [moves] = await conn.query(
-      `SELECT id, type, status, source_location_id AS sourceLocationId, dest_location_id AS destLocationId 
-       FROM inventory_stockmove WHERE id = ? FOR UPDATE`,
-      [stockmoveId]
+      `SELECT id, type, status, source_location_id AS sourceLocationId, dest_location_id AS destLocationId
+       FROM inventory_stockmove WHERE id = ? AND user_id = ? FOR UPDATE`,
+      [stockmoveId, userId]
     );
     const move = (moves as any[])[0];
     if (!move) throw new HttpError(404, 'Operation not found');
@@ -359,8 +371,8 @@ export const updateOperationStatus = async (
     await conn.execute(
       `UPDATE inventory_stockmove 
        SET status = ?, version = COALESCE(version, 1) + 1, last_edited_by = ?, updated_at = NOW()
-       WHERE id = ?`,
-      [status, actor ?? null, stockmoveId]
+       WHERE id = ? AND user_id = ?`,
+      [status, actor ?? null, stockmoveId, userId]
     );
 
     await conn.commit();

@@ -206,11 +206,43 @@ CREATE TABLE IF NOT EXISTS inventory_stockmove (
   notes TEXT NULL,
   version INT DEFAULT 1,
   last_edited_by VARCHAR(255),
+  user_id INT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NULL,
   CONSTRAINT fk_stockmove_src FOREIGN KEY (source_location_id) REFERENCES inventory_location(id),
-  CONSTRAINT fk_stockmove_dest FOREIGN KEY (dest_location_id) REFERENCES inventory_location(id)
+  CONSTRAINT fk_stockmove_dest FOREIGN KEY (dest_location_id) REFERENCES inventory_location(id),
+  CONSTRAINT fk_stockmove_user FOREIGN KEY (user_id) REFERENCES inventory_user(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Backward compatibility for existing stock moves
+SET @stockmove_user_exists := (
+  SELECT COUNT(*)
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'inventory_stockmove'
+    AND COLUMN_NAME = 'user_id'
+);
+SET @sql := IF(@stockmove_user_exists = 0, 'ALTER TABLE inventory_stockmove ADD COLUMN user_id INT NULL AFTER last_edited_by', 'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @stockmove_user_fk := (
+  SELECT COUNT(*)
+  FROM information_schema.KEY_COLUMN_USAGE
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'inventory_stockmove'
+    AND COLUMN_NAME = 'user_id'
+    AND REFERENCED_TABLE_NAME = 'inventory_user'
+);
+SET @sql := IF(@stockmove_user_fk = 0, 'ALTER TABLE inventory_stockmove ADD CONSTRAINT fk_stockmove_user FOREIGN KEY (user_id) REFERENCES inventory_user(id)', 'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+UPDATE inventory_stockmove
+SET user_id = (SELECT id FROM inventory_user ORDER BY id LIMIT 1)
+WHERE user_id IS NULL;
 
 CREATE TABLE IF NOT EXISTS inventory_stocktransfer (
   id INT AUTO_INCREMENT PRIMARY KEY,

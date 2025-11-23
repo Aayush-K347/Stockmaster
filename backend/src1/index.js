@@ -33,12 +33,20 @@ app.get('/api/health', (req, res) => {
 // Main query endpoint
 app.post('/api/query', async (req, res) => {
   const startTime = Date.now();
-  const { question } = req.body;
+  const { question, userId } = req.body;
 
   if (!question || typeof question !== 'string') {
     return res.status(400).json({
       success: false,
       error: 'Please provide a valid question.'
+    });
+  }
+
+  const numericUserId = Number(userId);
+  if (!Number.isInteger(numericUserId) || numericUserId <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: 'A valid userId is required to scope results.'
     });
   }
 
@@ -54,7 +62,7 @@ app.post('/api/query', async (req, res) => {
     console.log(`📝 Question: "${question}"`);
 
     // Step 1: Generate SQL
-    const sql = await generateSQL(question);
+    const sql = await generateSQL(question, numericUserId);
     console.log(`🔧 Generated SQL:\n${sql}`);
 
     // Step 2: Execute SQL
@@ -120,14 +128,19 @@ function getSuggestion(errorMessage) {
 
 // SQL-only endpoint (for debugging)
 app.post('/api/sql', async (req, res) => {
-  const { question } = req.body;
+  const { question, userId } = req.body;
 
   if (!question) {
     return res.status(400).json({ error: 'Question required' });
   }
 
+  const numericUserId = Number(userId);
+  if (!Number.isInteger(numericUserId) || numericUserId <= 0) {
+    return res.status(400).json({ error: 'A valid userId is required' });
+  }
+
   try {
-    const sql = await generateSQL(question);
+    const sql = await generateSQL(question, numericUserId);
     res.json({ success: true, sql });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -136,13 +149,23 @@ app.post('/api/sql', async (req, res) => {
 
 // Execute raw SQL (protected, for testing)
 app.post('/api/execute', async (req, res) => {
-  const { sql } = req.body;
+  const { sql, userId } = req.body;
 
   if (!sql) {
     return res.status(400).json({ error: 'SQL query required' });
   }
 
+  const numericUserId = Number(userId);
+  if (!Number.isInteger(numericUserId) || numericUserId <= 0) {
+    return res.status(400).json({ error: 'A valid userId is required' });
+  }
+
   try {
+    const scopePattern = new RegExp(`(user_id|created_by)\\s*=\\s*${numericUserId}\\b`, 'i');
+    if (!scopePattern.test(sql)) {
+      return res.status(400).json({ error: 'SQL must be scoped to the requesting user' });
+    }
+
     const results = await executeSQL(sql);
     res.json({ success: true, data: results, rowCount: results.length });
   } catch (error) {
@@ -153,7 +176,7 @@ app.post('/api/execute', async (req, res) => {
 // Test endpoint to verify Gemini API connection
 app.get('/api/test-ai', async (req, res) => {
   try {
-    const sql = await generateSQL('list all warehouses');
+    const sql = await generateSQL('list all warehouses', 1);
     res.json({ 
       success: true, 
       message: 'Gemini API is working!',

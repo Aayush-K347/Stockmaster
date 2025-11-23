@@ -96,7 +96,15 @@ function validateAndCleanSQL(rawResponse) {
   return sql;
 }
 
-export async function generateSQL(question, retries = 2) {
+function ensureUserScope(sql, userId) {
+  const userPattern = new RegExp(`(user_id|created_by)\\s*=\\s*${userId}\\b`, 'i');
+  if (!userPattern.test(sql)) {
+    throw new Error('Generated SQL must be scoped to the current user.');
+  }
+  return sql;
+}
+
+export async function generateSQL(question, userId, retries = 2) {
   // Try configured model first, then fallbacks
   const modelsToTry = [config.gemini.model, ...MODEL_FALLBACKS.filter(m => m !== config.gemini.model)];
   let lastError = null;
@@ -117,6 +125,9 @@ export async function generateSQL(question, retries = 2) {
         
         const prompt = `${systemPrompt}
 
+CURRENT USER ID: ${userId}
+Always include a filter to ensure results are only for this user (e.g., created_by = ${userId} or user_id = ${userId}).
+
 USER QUESTION: ${question}
 
 IMPORTANT: Return ONLY the raw SQL query. No explanations, no markdown, no code fences. Just the SQL.
@@ -133,8 +144,8 @@ SQL:`;
         
         console.log(`🤖 Raw Gemini response:\n${rawText}\n`);
         
-        // Validate and clean the response
-        const sql = validateAndCleanSQL(rawText);
+          // Validate, clean, and enforce user scope on the response
+          const sql = ensureUserScope(validateAndCleanSQL(rawText), userId);
         
         console.log(`✅ Cleaned SQL:\n${sql}\n`);
         return sql;
