@@ -19,32 +19,8 @@ console.log(`API Key: ${apiKey.substring(0, 20)}...\n`);
 
 const genAI = new GoogleGenerativeAI(apiKey);
 
-// Comprehensive list of model names to test
-const modelsToTest = [
-  // Latest versions
-  'gemini-1.5-flash-latest',
-  'gemini-1.5-pro-latest',
-  'gemini-1.5-flash-001',
-  'gemini-1.5-pro-001',
-  
-  // Standard versions
-  'gemini-1.5-flash',
-  'gemini-1.5-pro',
-  'gemini-pro',
-  
-  // With models/ prefix
-  'models/gemini-1.5-flash-latest',
-  'models/gemini-1.5-pro-latest',
-  'models/gemini-1.5-flash',
-  'models/gemini-1.5-pro',
-  'models/gemini-pro',
-  
-  // Versioned
-  'gemini-pro-v1',
-  'gemini-1.0-pro',
-  'gemini-1.5-flash-002',
-  'gemini-1.5-pro-002',
-];
+// Only test the supported production model
+const modelsToTest = ['gemini-2.5-flash'];
 
 async function testModel(modelName) {
   try {
@@ -91,12 +67,7 @@ async function diagnose() {
   const notFound = results.filter(r => r.status === 'not_found');
   
   if (working.length > 0) {
-    console.log('✅ WORKING MODELS:');
-    working.forEach(r => {
-      console.log(`   - ${r.model}`);
-    });
-    console.log(`\n💡 Add this to your .env file:`);
-    console.log(`   GEMINI_MODEL=${working[0].model}`);
+    console.log('✅ WORKING MODEL: gemini-2.5-flash');
   } else {
     console.log('❌ No working models found');
   }

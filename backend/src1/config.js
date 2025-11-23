@@ -6,6 +6,7 @@ export const config = {
   gemini: {
     // Fallback to the provided key so local runs work even if .env is missing
     apiKey: process.env.GEMINI_API_KEY || 'AIzaSyCa5xfG486cy_rSOdLU_BVNJfK_EQDjc_o',
+    // Model is pinned to the supported default to avoid 404s from deprecated names
     model: 'gemini-2.5-flash'
   },
   db: {

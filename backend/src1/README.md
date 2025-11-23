@@ -21,7 +21,7 @@ Natural Language to SQL Query Service for StockMaster Inventory System.
    PORT=5000
    ```
 
-   > ℹ️ A default Gemini API key is bundled in `config.js` to keep the service running out of the box. Replace it via `GEMINI_API_KEY` in your `.env` to avoid key rotation issues or quota conflicts.
+   > ℹ️ A default Gemini API key is bundled in `config.js` to keep the service running out of the box. Replace it via `GEMINI_API_KEY` in your `.env` to avoid key rotation issues or quota conflicts. The model is pinned to `gemini-2.5-flash` for stability and cannot be overridden.
 
 3. **Start the Server**
    ```bash

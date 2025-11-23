@@ -16,15 +16,8 @@ if (!apiKey) {
 
 const genAI = new GoogleGenerativeAI(apiKey);
 
-// Test different model names
-const modelsToTest = [
-  'gemini-pro',
-  'gemini-1.5-pro',
-  'gemini-1.5-flash',
-  'models/gemini-pro',
-  'models/gemini-1.5-pro',
-  'models/gemini-1.5-flash'
-];
+// Test the single supported model
+const modelsToTest = ['gemini-2.5-flash'];
 
 async function testModel(modelName) {
   try {
@@ -49,8 +42,6 @@ async function findWorkingModel() {
     const works = await testModel(modelName);
     if (works) {
       console.log(`\n✅ Found working model: ${modelName}`);
-      console.log(`\nAdd this to your .env file:`);
-      console.log(`GEMINI_MODEL=${modelName}`);
       return modelName;
     }
   }

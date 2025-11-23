@@ -7,16 +7,9 @@ import { systemPrompt } from './schema.js';
 
 const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
 
-// List of model names to try (including gemini-2.5-flash and fallbacks)
-const MODEL_FALLBACKS = [
-  'gemini-2.5-flash',
-  'gemini-2.0-flash-exp',
-  'gemini-1.5-flash-latest',
-  'gemini-1.5-pro-latest',
-  'gemini-1.5-flash',
-  'gemini-1.5-pro',
-  'gemini-pro'
-];
+// Only use the supported default model; avoid deprecated names that 404.
+const MODEL_FALLBACKS = [config.gemini.model];
+const MODEL_NAME = MODEL_FALLBACKS[0];
 
 // Validate that response is proper SQL
 function validateAndCleanSQL(rawResponse) {
@@ -105,25 +98,21 @@ function ensureUserScope(sql, userId) {
 }
 
 export async function generateSQL(question, userId, retries = 2) {
-  // Try configured model first, then fallbacks
-  const modelsToTry = [config.gemini.model, ...MODEL_FALLBACKS.filter(m => m !== config.gemini.model)];
   let lastError = null;
-  
-  // Try each model
-  for (const modelName of modelsToTry) {
-    for (let attempt = 0; attempt <= retries; attempt++) {
-      try {
-        const model = genAI.getGenerativeModel({ 
-          model: modelName,
-          generationConfig: {
-            temperature: 0.1,  // Low temperature for consistent SQL
-            topP: 0.8,
-            topK: 40,
-            maxOutputTokens: 1024,
-          }
-        });
-        
-        const prompt = `${systemPrompt}
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: MODEL_NAME,
+        generationConfig: {
+          temperature: 0.1,  // Low temperature for consistent SQL
+          topP: 0.8,
+          topK: 40,
+          maxOutputTokens: 1024,
+        }
+      });
+
+      const prompt = `${systemPrompt}
 
 CURRENT USER ID: ${userId}
 Always include a filter to ensure results are only for this user (e.g., created_by = ${userId} or user_id = ${userId}).
@@ -134,48 +123,35 @@ IMPORTANT: Return ONLY the raw SQL query. No explanations, no markdown, no code 
 
 SQL:`;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const rawText = response.text();
-        
-        if (modelName !== config.gemini.model) {
-          console.log(`✅ Using fallback model: ${modelName}`);
-        }
-        
-        console.log(`🤖 Raw Gemini response:\n${rawText}\n`);
-        
-          // Validate, clean, and enforce user scope on the response
-          const sql = ensureUserScope(validateAndCleanSQL(rawText), userId);
-        
-        console.log(`✅ Cleaned SQL:\n${sql}\n`);
-        return sql;
-        
-      } catch (error) {
-        lastError = error;
-        
-        // If it's a "model not found" error, try next model immediately
-        if (error.message.includes('404') || 
-            error.message.includes('not found') || 
-            error.message.includes('not supported')) {
-          console.log(`⚠️ Model ${modelName} not found, trying next...`);
-          break; // Break inner loop, try next model
-        }
-        
-        // Don't retry for certain errors
-        if (error.message.includes('read-only') || 
-            error.message.includes('cannot answer') ||
-            error.message.includes('API key')) {
-          throw error;
-        }
-        
-        // For other errors, wait and retry
-        if (attempt < retries) {
-          console.warn(`⚠️ Attempt ${attempt + 1} failed: ${error.message.substring(0, 80)}...`);
-          await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
-        }
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const rawText = response.text();
+
+      console.log('🤖 Raw Gemini response:', rawText);
+
+      // Validate, clean, and enforce user scope on the response
+      const sql = ensureUserScope(validateAndCleanSQL(rawText), userId);
+
+      console.log('✅ Cleaned SQL:', sql);
+      return sql;
+
+    } catch (error) {
+      lastError = error;
+
+      // Don't retry for certain errors
+      if (error.message.includes('read-only') ||
+          error.message.includes('cannot answer') ||
+          error.message.includes('API key')) {
+        throw error;
+      }
+
+      // For other errors, wait and retry
+      if (attempt < retries) {
+        console.warn(`⚠️ Attempt ${attempt + 1} failed: ${error.message.substring(0, 80)}...`);
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
       }
     }
   }
-  
+
   throw new Error(`SQL Generation failed: All models failed. Last error: ${lastError?.message?.substring(0, 200) || 'Unknown error'}`);
 }

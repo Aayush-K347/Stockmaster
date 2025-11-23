@@ -19,13 +19,8 @@ console.log(`API Key: ${apiKey.substring(0, 20)}...\n`);
 
 const genAI = new GoogleGenerativeAI(apiKey);
 
-// Free tier models only (in order of likelihood to work)
-const freeTierModels = [
-  'gemini-1.5-flash',        // Most common free tier model
-  'gemini-1.5-pro',          // Also available on free tier
-  'gemini-1.5-flash-latest', // Latest version
-  'gemini-1.5-pro-latest',   // Latest version
-];
+// Only test the supported production model
+const freeTierModels = ['gemini-2.5-flash'];
 
 async function testModel(modelName) {
   try {
@@ -72,18 +67,10 @@ async function testFreeTier() {
   const notFound = results.filter(r => r.status === 'not_found');
   
   if (working.length > 0) {
-    console.log('✅ WORKING MODELS (Use this in .env):');
-    working.forEach(r => {
-      console.log(`   GEMINI_MODEL=${r.model}`);
-    });
-    console.log(`\n💡 Copy the first one to your .env file!`);
+    console.log('✅ WORKING MODEL: gemini-2.5-flash');
   } else if (quota.length > 0) {
-    console.log('⚠️  MODELS EXIST BUT HIT QUOTA:');
-    quota.forEach(r => {
-      console.log(`   - ${r.model}`);
-    });
-    console.log(`\n💡 These models work! Just wait 30-60 seconds and try again.`);
-    console.log(`   Use this in .env: GEMINI_MODEL=${quota[0].model}`);
+    console.log('⚠️  MODEL EXISTS BUT HIT QUOTA: gemini-2.5-flash');
+    console.log(`\n💡 The model works! Just wait 30-60 seconds and try again.`);
   } else {
     console.log('❌ No free tier models found');
     console.log('\n🔧 Possible fixes:');
