@@ -84,10 +84,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsLoaded(true);
       if (!ready || !fbUser.email) return;
       try {
-        const data = await apiFetch<{ user: AuthUser }>('/auth/sync', { method: 'POST' });
+        const authHeaders = { Authorization: `Bearer ${idToken}` };
+        const data = await apiFetch<{ user: AuthUser }>('/auth/sync', {
+          method: 'POST',
+          headers: authHeaders,
+        });
         setBackendUser(data.user);
         if (!trackedLogin) {
-          await apiFetch('/auth/track', { method: 'POST', body: JSON.stringify({ event: 'login' }) });
+          await apiFetch('/auth/track', {
+            method: 'POST',
+            headers: authHeaders,
+            body: JSON.stringify({ event: 'login' }),
+          });
           setTrackedLogin(true);
         }
       } catch (err) {
@@ -106,8 +114,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const idToken = await cred.user.getIdToken();
     setToken(idToken);
     try {
-      await apiFetch('/auth/sync', { method: 'POST' });
-      await apiFetch('/auth/track', { method: 'POST', body: JSON.stringify({ event: 'signup' }) });
+      const authHeaders = { Authorization: `Bearer ${idToken}` };
+      await apiFetch('/auth/sync', { method: 'POST', headers: authHeaders });
+      await apiFetch('/auth/track', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ event: 'signup' }),
+      });
       setTrackedLogin(true);
     } catch (err) {
       console.error('Signup sync failed', err);
