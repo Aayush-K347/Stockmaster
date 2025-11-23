@@ -32,6 +32,4 @@ export const env = {
     password: pickEnv(['DB_PASSWORD', 'MYSQLPASSWORD']),
     database: pickEnv(['DB_NAME', 'MYSQLDATABASE']),
   },
-  passwordResetRedirectUrl:
-    process.env.PASSWORD_RESET_REDIRECT_URL || 'http://localhost:5173/?reset=1',
 };
