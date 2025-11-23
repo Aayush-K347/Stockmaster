@@ -162,10 +162,11 @@ cd feature1
 pip install -r requirements.txt
 ```
 
-**Generate Initial Forecasts:**
+**Generate Initial Forecasts (run this first):**
 ```bash
-# This will train the Prophet model and generate 30-day predictions
-curl -X POST http://127.0.0.1:5000/api/forecast/generate
+# This will train the Prophet model and generate 30-day predictions.
+# Replace <YOUR-APP-URL> with the deployed host (e.g., https://your-app-url.com).
+curl -X POST <YOUR-APP-URL>/api/forecast/generate
 ```
 
 **Start the Dashboard:**
@@ -174,21 +175,21 @@ python app.py
 ```
 
 **Access the Dashboard:**
-Open your browser and navigate to:
+Open your browser and navigate to your deployed host:
 ```
-http://127.0.0.1:5000/dashboard
+<YOUR-APP-URL>/dashboard
 ```
 
 ### ⚡ Quick Commands
 ```bash
 # Update forecasts (run daily via cron)
-curl -X POST http://127.0.0.1:5000/api/forecast/generate
+curl -X POST <YOUR-APP-URL>/api/forecast/generate
 
 # View smart alerts
-curl http://127.0.0.1:5000/api/alerts
+curl <YOUR-APP-URL>/api/alerts
 
 # Generate purchase order
-curl -X POST http://127.0.0.1:5000/api/procurement/create \
+curl -X POST <YOUR-APP-URL>/api/procurement/create \
   -H "Content-Type: application/json" \
   -d '{"product_id": 123, "quantity": 50}'
 ```

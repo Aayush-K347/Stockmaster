@@ -1,12 +1,35 @@
+import logging
+from datetime import datetime
+
 import pandas as pd
 from prophet import Prophet
 from sqlalchemy import text
-from datetime import datetime
-import logging
 
 # Setup Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def ensure_forecast_table(engine):
+    """Create the forecast table if it does not already exist."""
+    create_sql = text(
+        """
+        CREATE TABLE IF NOT EXISTS inventory_demand_forecast (
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            product_id BIGINT NOT NULL,
+            forecast_date DATE NOT NULL,
+            predicted_quantity DECIMAL(10, 2) NOT NULL DEFAULT 0,
+            confidence_lower DECIMAL(10, 2) NOT NULL DEFAULT 0,
+            confidence_upper DECIMAL(10, 2) NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_product_date (product_id, forecast_date),
+            INDEX idx_product_date (product_id, forecast_date)
+        ) ENGINE=InnoDB;
+        """
+    )
+
+    with engine.begin() as conn:
+        conn.execute(create_sql)
 
 class DemandForecaster:
     def __init__(self, db_engine):
@@ -20,6 +43,9 @@ class DemandForecaster:
         Main entry point to generate forecasts for all eligible products.
         """
         logger.info("Starting Demand Forecasting...")
+
+        # Ensure the forecast table exists before we write into it
+        ensure_forecast_table(self.db_engine)
         
         # 1. Get list of products that have movement history
         products_query = """

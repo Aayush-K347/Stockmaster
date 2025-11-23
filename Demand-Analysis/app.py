@@ -1,8 +1,10 @@
+import uuid
+
 from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 from sqlalchemy import create_engine, text
-from services.forecasting import DemandForecaster
-import uuid
+
+from services.forecasting import DemandForecaster, ensure_forecast_table
 
 app = Flask(__name__)
 CORS(
@@ -18,6 +20,9 @@ CORS(
 # ✅ Correct Railway MySQL connection string
 DB_URI = "mysql+pymysql://root:jFXtFCQQRDxrresXmuhSLwFRtAbrOmBo@interchange.proxy.rlwy.net:19580/railway"
 engine = create_engine(DB_URI)
+
+# Make sure the forecast table exists before any API access
+ensure_forecast_table(engine)
 
 @app.route('/dashboard')
 def dashboard_view():
@@ -36,6 +41,8 @@ def trigger_forecast():
 
 @app.route('/api/dashboard/smart-alerts', methods=['GET'])
 def get_smart_alerts():
+    ensure_forecast_table(engine)
+
     sql = text("""
         WITH Stock AS (
             SELECT product_id, SUM(quantity) as total_qty
@@ -88,6 +95,8 @@ def get_smart_alerts():
 
 @app.route('/api/forecast/<int:product_id>', methods=['GET'])
 def get_product_forecast(product_id):
+    ensure_forecast_table(engine)
+
     sql = text("""
         SELECT forecast_date, predicted_quantity, confidence_lower, confidence_upper
         FROM inventory_demand_forecast
