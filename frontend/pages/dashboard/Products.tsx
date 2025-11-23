@@ -23,7 +23,7 @@ export default function Products() {
       quantity: newProduct.quantity || 0,
       minStock: 10,
       maxStock: 100,
-      price: 0,
+      price: newProduct.price ?? Number((Math.random() * 450 + 50).toFixed(2)),
       location: 'WH-Main',
       qcStatus: 'PENDING'
     });
