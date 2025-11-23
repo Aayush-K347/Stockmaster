@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Layers, ArrowLeft, Mail, Lock, ChevronRight } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Layers, Mail, Lock, ChevronRight, ShieldCheck, RefreshCw } from 'lucide-react';
 import { GlassCard } from '../components/GlassCard';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -9,17 +9,31 @@ interface AuthPageProps {
 }
 
 export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
-  const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
+  const [mode, setMode] = useState<'signIn' | 'signUp' | 'reset'>('signIn');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [resetRequested, setResetRequested] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { login, signup, resetPassword, isSignedIn } = useAuth();
+  const [resetStep, setResetStep] = useState<'request' | 'confirm'>('request');
+  const [oobCode, setOobCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
+  const { login, signup, resetPassword, verifyResetCode, confirmPasswordReset, isSignedIn } = useAuth();
+
+  const headerCopy = useMemo(() => {
+    if (mode === 'reset') return { title: 'Reset your password', subtitle: 'Secure OTP-based reset via your email.' };
+    return {
+      title: mode === 'signIn' ? 'Secure Sign In' : 'Create an Account',
+      subtitle: 'Email + password with Firebase-backed OTP reset.',
+    };
+  }, [mode]);
   useEffect(() => {
     const syncMode = () => {
       const hash = window.location.hash.toLowerCase();
       if (hash.includes('sign-up')) setMode('signUp');
+      else if (hash.includes('reset')) setMode('reset');
       else setMode('signIn');
     };
     syncMode();
@@ -30,6 +44,25 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
   useEffect(() => {
     if (isSignedIn) onLoginSuccess();
   }, [isSignedIn, onLoginSuccess]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const incomingCode = params.get('oobCode');
+    const incomingMode = params.get('mode');
+    if (incomingMode === 'resetPassword' && incomingCode) {
+      setMode('reset');
+      setResetStep('confirm');
+      setOobCode(incomingCode);
+      verifyResetCode(incomingCode)
+        .then((foundEmail) => {
+          setVerifiedEmail(foundEmail);
+          setEmail(foundEmail);
+        })
+        .catch(() => setError('The reset code is invalid or expired. Please request a new one.'));
+    } else if (params.get('reset') === '1') {
+      setMode('reset');
+    }
+  }, [verifyResetCode]);
 
   const handleAuth = async (action: 'signin' | 'signup') => {
     setLoading(true);
@@ -54,8 +87,40 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
     try {
       await resetPassword(email);
       setResetRequested(true);
+      setResetStep('confirm');
     } catch (err: any) {
       setError(err?.message || 'Unable to send reset email');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmReset = async () => {
+    if (!oobCode) {
+      setError('Enter the OTP code from your email.');
+      return;
+    }
+    if (!newPassword || newPassword.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      await confirmPasswordReset(oobCode, newPassword);
+      setResetRequested(false);
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setOobCode('');
+      setVerifiedEmail(null);
+      setMode('signIn');
+    } catch (err: any) {
+      setError(err?.message || 'Unable to reset password. Request a new code and try again.');
     } finally {
       setLoading(false);
     }
@@ -83,14 +148,10 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">
-                  {mode === 'signIn' ? 'Welcome Back' : 'Join StockMaster'}
+                  {mode === 'signIn' ? 'Welcome Back' : mode === 'signUp' ? 'Join StockMaster' : 'Password Reset'}
                 </div>
-                <h2 className="text-2xl font-bold font-display text-white">
-                  {mode === 'signIn' ? 'Secure Sign In' : 'Create an Account'}
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  Email + password with Firebase-backed OTP reset.
-                </p>
+                <h2 className="text-2xl font-bold font-display text-white">{headerCopy.title}</h2>
+                <p className="text-sm text-gray-500 mt-1">{headerCopy.subtitle}</p>
               </div>
               <div className="flex gap-2 bg-white/5 rounded-full p-1 border border-white/10">
                 <button
@@ -109,79 +170,209 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
                 >
                   Sign Up
                 </button>
+                <button
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                    mode === 'reset' ? 'bg-primary text-white' : 'text-gray-300'
+                  }`}
+                  onClick={() => {
+                    setMode('reset');
+                    setResetStep('request');
+                    setResetRequested(false);
+                    setError(null);
+                  }}
+                >
+                  Reset
+                </button>
               </div>
             </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleAuth(mode === 'signIn' ? 'signin' : 'signup');
-              }}
-              className="space-y-4"
-            >
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wider">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
-                  <input
-                    type="email"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-sm text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder-gray-600"
-                    placeholder="admin@stockmaster.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between mb-1.5">
-                  <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider">Password</label>
-                  <button
-                    type="button"
-                    onClick={handleReset}
-                    className="text-xs text-primary hover:text-primaryLight transition-colors"
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
-                  <input
-                    type="password"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-sm text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder-gray-600"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              {error && <p className="text-sm text-red-400 text-center">{error}</p>}
-              {resetRequested && (
-                <p className="text-sm text-green-400 text-center">
-                  Check your email for the password reset OTP link.
-                </p>
-              )}
-
-              <button
-                disabled={loading}
-                className="w-full py-3 bg-primary hover:bg-primaryLight text-white rounded-lg font-medium transition-all shadow-[0_0_20px_-5px_rgba(109,40,217,0.5)] hover:shadow-[0_0_30px_-5px_rgba(109,40,217,0.7)] hover:-translate-y-0.5 flex justify-center items-center gap-2"
+            {mode !== 'reset' ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleAuth(mode === 'signIn' ? 'signin' : 'signup');
+                }}
+                className="space-y-4"
               >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : mode === 'signIn' ? (
-                  'Sign In'
-                ) : (
-                  <>
-                    Create Account <ChevronRight size={16} />
-                  </>
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wider">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+                    <input
+                      type="email"
+                      className="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-sm text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder-gray-600"
+                      placeholder="admin@stockmaster.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1.5">
+                    <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider">Password</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode('reset');
+                        setResetStep('request');
+                        setResetRequested(false);
+                        setError(null);
+                      }}
+                      className="text-xs text-primary hover:text-primaryLight transition-colors"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+                    <input
+                      type="password"
+                      className="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-sm text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder-gray-600"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {error && <p className="text-sm text-red-400 text-center">{error}</p>}
+
+                <button
+                  disabled={loading}
+                  className="w-full py-3 bg-primary hover:bg-primaryLight text-white rounded-lg font-medium transition-all shadow-[0_0_20px_-5px_rgba(109,40,217,0.5)] hover:shadow-[0_0_30px_-5px_rgba(109,40,217,0.7)] hover:-translate-y-0.5 flex justify-center items-center gap-2"
+                >
+                  {loading ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : mode === 'signIn' ? (
+                    'Sign In'
+                  ) : (
+                    <>
+                      Create Account <ChevronRight size={16} />
+                    </>
+                  )}
+                </button>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-white/5 border border-white/10">
+                  <ShieldCheck className="text-primary" size={18} />
+                  <p className="text-sm text-gray-300">
+                    A one-time reset code will be sent to your email. Paste it below to choose a new password.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wider">
+                    Account Email
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+                    <input
+                      type="email"
+                      className="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-sm text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder-gray-600"
+                      placeholder="your@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  disabled={loading}
+                  className="w-full py-3 bg-primary hover:bg-primaryLight text-white rounded-lg font-medium transition-all shadow-[0_0_20px_-5px_rgba(109,40,217,0.5)] hover:shadow-[0_0_30px_-5px_rgba(109,40,217,0.7)] hover:-translate-y-0.5 flex justify-center items-center gap-2"
+                >
+                  {loading ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      Send Reset OTP <ChevronRight size={16} />
+                    </>
+                  )}
+                </button>
+
+                {resetStep === 'confirm' && (
+                  <div className="space-y-3 pt-2 border-t border-white/10">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wider">
+                        OTP Code from Email
+                      </label>
+                      <div className="relative">
+                        <RefreshCw className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+                        <input
+                          type="text"
+                          className="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-sm text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder-gray-600"
+                          placeholder="Paste the 6+ digit code"
+                          value={oobCode}
+                          onChange={(e) => setOobCode(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wider">New Password</label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+                        <input
+                          type="password"
+                          className="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-sm text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder-gray-600"
+                          placeholder="••••••••"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wider">Confirm Password</label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+                        <input
+                          type="password"
+                          className="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-sm text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder-gray-600"
+                          placeholder="Repeat password"
+                          value={confirmNewPassword}
+                          onChange={(e) => setConfirmNewPassword(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleConfirmReset}
+                      disabled={loading}
+                      className="w-full py-3 bg-primary hover:bg-primaryLight text-white rounded-lg font-medium transition-all shadow-[0_0_20px_-5px_rgba(109,40,217,0.5)] hover:shadow-[0_0_30px_-5px_rgba(109,40,217,0.7)] hover:-translate-y-0.5 flex justify-center items-center gap-2"
+                    >
+                      {loading ? (
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          Confirm Reset <ChevronRight size={16} />
+                        </>
+                      )}
+                    </button>
+
+                    {verifiedEmail && (
+                      <p className="text-xs text-center text-gray-400">Resetting password for {verifiedEmail}</p>
+                    )}
+                  </div>
                 )}
-              </button>
-            </form>
+
+                {error && <p className="text-sm text-red-400 text-center">{error}</p>}
+                {resetRequested && (
+                  <p className="text-sm text-green-400 text-center">
+                    Check your email for the password reset OTP link.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="mt-4 text-center">
               {mode === 'signIn' ? (

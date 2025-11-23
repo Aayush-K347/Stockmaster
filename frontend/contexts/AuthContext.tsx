@@ -4,6 +4,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
+  verifyPasswordResetCode,
+  confirmPasswordReset as firebaseConfirmPasswordReset,
 } from 'firebase/auth';
 import { firebaseAuth } from '../firebaseClient';
 
@@ -23,6 +25,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  verifyResetCode: (oobCode: string) => Promise<string>;
+  confirmPasswordReset: (oobCode: string, newPassword: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -128,7 +132,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const resetPassword = async (email: string) => {
-    await sendPasswordResetEmail(firebaseAuth, email);
+    const actionCodeSettings = {
+      url: `${window.location.origin}?reset=1`,
+      handleCodeInApp: true,
+    };
+    await sendPasswordResetEmail(firebaseAuth, email, actionCodeSettings);
+  };
+
+  const verifyResetCode = async (oobCode: string) => {
+    return verifyPasswordResetCode(firebaseAuth, oobCode);
+  };
+
+  const confirmPasswordReset = async (oobCode: string, newPassword: string) => {
+    await firebaseConfirmPasswordReset(firebaseAuth, oobCode, newPassword);
   };
 
   const logout = async () => {
@@ -155,6 +171,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         login,
         signup,
         resetPassword,
+        verifyResetCode,
+        confirmPasswordReset,
         logout,
       }}
     >
