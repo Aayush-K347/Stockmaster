@@ -19,7 +19,7 @@
    ```
 
 3. **Configure environment variables**
-   
+
    Create a `.env` file in `backend/src1/` with:
    ```env
    GEMINI_API_KEY=your_gemini_api_key_here
@@ -30,6 +30,8 @@
    DB_NAME=inventory_db
    PORT=5000
    ```
+
+   > ℹ️ A default Gemini API key and the `gemini-2.5-flash` model are configured in `config.js` so the service can start immediately. Override them in your `.env` to use your own credentials and model preference.
 
 4. **Start the server**
    ```bash
