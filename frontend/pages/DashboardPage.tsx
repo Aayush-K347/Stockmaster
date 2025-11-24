@@ -2,11 +2,11 @@
 import React, { useState } from 'react';
 import { ViewState } from '../types';
 import { MOCK_WAREHOUSES } from '../constants';
-import { 
-  LayoutDashboard, Package, ArrowRightLeft, Settings, 
-  LogOut, Bell, Search, ChevronDown, ArrowUpRight, 
-  ArrowDownLeft, Menu, Layers, 
-  ClipboardList, TrendingUp, Map, Zap
+import {
+  LayoutDashboard, Package, ArrowRightLeft,
+  LogOut, Bell, Search, ChevronDown, ArrowUpRight,
+  ArrowDownLeft, Menu, Layers,
+  ClipboardList, TrendingUp, Zap
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -71,7 +71,6 @@ export default function DashboardPage({ onLogout }: { onLogout: () => void }) {
            {isSidebarOpen && <SectionLabel label="Intelligence" />}
            <NavItem icon={ClipboardList} label="Stock Ledger" active={view === ViewState.STOCK_LEDGER} onClick={() => setView(ViewState.STOCK_LEDGER)} showLabel={isSidebarOpen} />
            <NavItem icon={Zap} label="Inventory Bot" active={view === ViewState.QUANTUM_INVENTORY} onClick={() => setView(ViewState.QUANTUM_INVENTORY)} showLabel={isSidebarOpen} />
-           <NavItem icon={Map} label="Settings" active={view === ViewState.SETTINGS} onClick={() => setView(ViewState.SETTINGS)} showLabel={isSidebarOpen} />
         </div>
 
         <div className="p-4 mt-auto border-t border-white/5">
@@ -126,7 +125,6 @@ export default function DashboardPage({ onLogout }: { onLogout: () => void }) {
            {view === ViewState.OPERATIONS_ADJUSTMENTS && <div className="p-6 md:p-8"><Adjustments /></div>}
            {view === ViewState.STOCK_LEDGER && <div className="p-6 md:p-8"><Ledger /></div>}
            {view === ViewState.QUANTUM_INVENTORY && <QuantumInventory />}
-           {view === ViewState.SETTINGS && <div className="p-6 md:p-8 text-center py-20 text-gray-500">Settings Panel Placeholder</div>}
         </div>
       </main>
     </div>
