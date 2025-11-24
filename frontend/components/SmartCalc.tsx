@@ -73,35 +73,63 @@ export default function SmartCalc() {
     }
   }
 
+  const updateExpression = (nextExpr: string) => {
+    const normalized = nextExpr || '';
+    setExpr(normalized);
+    setDisplay(normalized.length ? normalized : '0');
+  };
+
   function handleButton(val: string) {
-    if (val === 'C') {
+    if (val === 'AC') {
       setExpr('');
       setDisplay('0');
       setSteps('');
       return;
     }
+
+    if (val === 'C') {
+      const base = expr || display;
+      const next = base.length > 1 ? base.slice(0, -1) : '';
+      updateExpression(next);
+      setSteps('');
+      return;
+    }
+
+    if (val === '+/-') {
+      const base = expr || display || '0';
+      const toggled = base.startsWith('-') ? base.slice(1) : `-${base}`;
+      updateExpression(toggled);
+      return;
+    }
+
     if (val === '=') {
-      const r = safeEval(expr || display);
+      const source = expr || display;
+      const r = safeEval(source);
       if (!r.ok) {
         setDisplay('Err');
-        setSteps(expr);
+        setSteps(source);
       } else {
-        setSteps(expr || display);
-        setDisplay(String(r.result));
-        setExpr(String(r.result));
+        const result = String(r.result);
+        setSteps(source || '0');
+        setDisplay(result);
+        setExpr(result);
       }
       return;
     }
-    // append value
-    // prevent leading multiple operators
-    if (/^[+\-*/]$/.test(val)) {
-      // if expr empty and display is present, start with display
-      if (!expr) setExpr(display + val);
-      else setExpr((prev) => prev + val);
-    } else {
-      setExpr((prev) => (prev || '') + val);
-      setDisplay((prev) => (prev === '0' || prev === 'Err' ? val : prev + val));
+
+    const isOperator = /^[+\-*/]$/.test(val);
+
+    if (isOperator) {
+      const base = expr || display || '0';
+      const trimmed = base.replace(/\s+/g, '');
+      const next = /[+\-*/]$/.test(trimmed) ? `${trimmed.slice(0, -1)}${val}` : `${trimmed}${val}`;
+      updateExpression(next);
+      return;
     }
+
+    // append digit or decimal
+    const nextExpr = `${expr || ''}${val}`;
+    updateExpression(nextExpr);
   }
 
   function applyToField() {
@@ -125,15 +153,24 @@ export default function SmartCalc() {
     }
   }
 
-  const keypad = [
-    ['7', '8', '9', '/'],
-    ['4', '5', '6', '*'],
-    ['1', '2', '3', '-'],
-    ['0', '.', 'C', '+'],
+  const keypad: (string | null)[][] = [
+    ['C', '/', '*', '-'],
+    ['7', '8', '9', '+'],
+    ['4', '5', '6', null],
+    ['1', '2', '3', '='],
+    ['0', '.', '+/-', 'AC'],
   ];
 
-  // styles scoped via unique class prefix
   const cls = 'sc-';
+
+  const keyVariant = (val: string | null) => {
+    if (!val) return `${cls}key ${cls}key-empty`;
+    if (val === 'C') return `${cls}key ${cls}key-danger`;
+    if (val === 'AC') return `${cls}key ${cls}key-muted`;
+    if (val === '=') return `${cls}key ${cls}key-equal`;
+    if (/^[+\-*/]$/.test(val)) return `${cls}key ${cls}key-operator`;
+    return `${cls}key ${cls}key-dark`;
+  };
 
   return (
     <div
@@ -149,19 +186,30 @@ export default function SmartCalc() {
       }}
     >
       <style>{`
-        .${cls}container { width: 320px; max-width: 90vw; font-family: Inter, system-ui, sans-serif; }
-        .${cls}card { background: linear-gradient(180deg,#0b0210, #120417); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.6); overflow:hidden; color:#fff; border:1px solid rgba(139,92,246,0.12); }
-        .${cls}header { display:flex; align-items:center; justify-content:space-between; padding:10px 12px; cursor:grab; background:linear-gradient(90deg, rgba(109,40,217,0.9), rgba(59,130,246,0.6)); }
-        .${cls}title { font-weight:700; color:#fff; letter-spacing:0.4px; }
+        .${cls}container { width: 340px; max-width: 94vw; font-family: 'Inter', system-ui, sans-serif; }
+        .${cls}card { background: radial-gradient(120% 120% at 20% 10%, rgba(99,102,241,0.18), transparent), linear-gradient(180deg,#0b0210, #120417); border-radius:18px; box-shadow:0 18px 42px rgba(0,0,0,0.55); overflow:hidden; color:#fff; border:1px solid rgba(139,92,246,0.2); backdrop-filter: blur(10px); }
+        .${cls}header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; cursor:grab; background:linear-gradient(90deg, #7c3aed, #6366f1); box-shadow: inset 0 1px 0 rgba(255,255,255,0.15); }
+        .${cls}title { font-weight:800; color:#e8e7ff; letter-spacing:0.6px; font-size:14px; }
         .${cls}controls { display:flex; gap:8px; }
-        .${cls}btn { background:rgba(255,255,255,0.06); border:none; color:#fff; padding:6px 8px; border-radius:8px; cursor:pointer; }
-        .${cls}displayWrap { padding:12px; background:linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.35)); }
-        .${cls}steps { font-size:12px; color:rgba(255,255,255,0.6); min-height:16px; }
-        .${cls}display { font-size:24px; font-weight:700; margin-top:6px; color:#fff; min-height:28px; }
-        .${cls}pad { padding:12px; display:grid; grid-template-columns: repeat(4,1fr); gap:8px; }
-        .${cls}key { background:linear-gradient(180deg, #1b0724, #22072c); border-radius:8px; padding:14px 8px; text-align:center; font-weight:700; cursor:pointer; user-select:none; color:#e9e2ff; border:1px solid rgba(255,255,255,0.04); }
-        .${cls}apply { grid-column: span 4; margin-top:8px; background:linear-gradient(90deg,#8b5cf6,#3b82f6); padding:12px; border-radius:8px; text-align:center; font-weight:800; cursor:pointer; }
-        .${cls}minimized { width: 160px; }
+        .${cls}btn { background:rgba(255,255,255,0.12); border:none; color:#fff; padding:6px 10px; border-radius:10px; cursor:pointer; font-weight:700; transition: transform 0.1s ease, background 0.2s ease; }
+        .${cls}btn:hover { background:rgba(255,255,255,0.18); transform: translateY(-1px); }
+        .${cls}displayWrap { padding:14px; background:linear-gradient(180deg, rgba(0,0,0,0.35), rgba(12,5,24,0.55)); border-bottom:1px solid rgba(255,255,255,0.05); }
+        .${cls}steps { font-size:13px; color:rgba(255,255,255,0.65); min-height:18px; text-align:right; }
+        .${cls}display { font-size:30px; font-weight:800; margin-top:8px; color:#8bffd8; min-height:34px; text-align:right; letter-spacing:0.5px; }
+        .${cls}padWrap { padding:14px; }
+        .${cls}pad { display:grid; grid-template-columns: repeat(4,1fr); gap:10px; }
+        .${cls}key { border-radius:10px; padding:14px 10px; text-align:center; font-weight:800; cursor:pointer; user-select:none; border:1px solid rgba(255,255,255,0.04); transition: transform 0.08s ease, filter 0.12s ease; font-size:16px; }
+        .${cls}key:active { transform: scale(0.98); filter: brightness(0.95); }
+        .${cls}key-danger { background:linear-gradient(180deg, #ef4444, #dc2626); color:#fff; box-shadow:0 6px 16px rgba(239,68,68,0.35); }
+        .${cls}key-operator { background:linear-gradient(180deg,#fbbf24, #f59e0b); color:#1f1f1f; box-shadow:0 6px 16px rgba(245,158,11,0.35); }
+        .${cls}key-equal { background:linear-gradient(180deg,#3b82f6, #2563eb); color:#e7f0ff; box-shadow:0 6px 16px rgba(37,99,235,0.35); grid-row: span 1; }
+        .${cls}key-muted { background:linear-gradient(180deg,#1f2937,#111827); color:#d1d5db; border:1px solid rgba(255,255,255,0.06); }
+        .${cls}key-dark { background:linear-gradient(180deg,#111827,#0b1224); color:#f9fafb; border:1px solid rgba(255,255,255,0.05); }
+        .${cls}key-empty { visibility:hidden; }
+        .${cls}apply { margin-top:12px; background:linear-gradient(90deg,#f97316,#eab308); padding:14px; border-radius:12px; text-align:center; font-weight:900; cursor:pointer; letter-spacing:0.5px; color:#0b0b0b; border:none; box-shadow:0 10px 22px rgba(234,179,8,0.35); transition: transform 0.1s ease, box-shadow 0.2s ease; }
+        .${cls}apply:hover { transform: translateY(-1px); box-shadow:0 14px 26px rgba(234,179,8,0.4); }
+        .${cls}apply:active { transform: translateY(0); box-shadow:0 10px 22px rgba(234,179,8,0.35); }
+        .${cls}minimized { width: 180px; }
         @media (max-width:420px){ .${cls}container{ width: 92vw; right:8px; bottom:12px; } }
       `}</style>
 
@@ -183,26 +231,28 @@ export default function SmartCalc() {
         </div>
 
         <div className={`${cls}displayWrap`}>
-          <div className={`${cls}steps`}>{steps}</div>
+          <div className={`${cls}steps`}>{steps || '\u00A0'}</div>
           <div className={`${cls}display`}>{display}</div>
         </div>
 
         {!minimized && (
-          <div style={{ padding: 12 }}>
+          <div className={`${cls}padWrap`}>
             <div className={`${cls}pad`}>
-              {keypad.flat().map((k) => (
-                <div
-                  key={k}
-                  className={`${cls}key`}
-                  onClick={() => handleButton(k)}
-                >
-                  {k}
-                </div>
-              ))}
+              {keypad.flatMap((row, rowIndex) =>
+                row.map((k, idx) => (
+                  <div
+                    key={`${rowIndex}-${idx}-${k ?? 'empty'}`}
+                    className={keyVariant(k)}
+                    onClick={k ? () => handleButton(k) : undefined}
+                  >
+                    {k ?? ''}
+                  </div>
+                ))
+              )}
             </div>
-            <div className={`${cls}apply`} onClick={applyToField}>
+            <button className={`${cls}apply`} onClick={applyToField}>
               APPLY TO FIELD
-            </div>
+            </button>
           </div>
         )}
       </div>
