@@ -107,19 +107,48 @@ export const StoreProvider = ({ children }: { children?: ReactNode }) => {
   });
 
   const loadFromApi = async () => {
-    if (!apiReady) return;
+    if (!apiReady) return false;
     try {
       const [apiProducts, apiOps, apiLedger] = await Promise.all([
         apiFetch('/products'),
         apiFetch('/operations'),
         apiFetch('/ledger'),
       ]);
-      setProducts((apiProducts as any[]).map(mapProduct));
-      setOperations((apiOps as any[]).map(mapOperation));
-      setLedger((apiLedger as any[]).map(mapLedger));
+      const mappedProducts = (apiProducts as any[]).map(mapProduct);
+      const mappedOperations = (apiOps as any[]).map(mapOperation);
+      const mappedLedger = (apiLedger as any[]).map(mapLedger);
+      setProducts(mappedProducts);
+      setOperations(mappedOperations);
+      setLedger(mappedLedger);
+      writeSessionSnapshot(sessionKey, {
+        products: mappedProducts,
+        operations: mappedOperations,
+        ledger: mappedLedger,
+      });
+      return true;
     } catch (error) {
       console.error('Failed to load from backend', error);
+      return false;
     }
+  };
+
+  const loadFromSnapshotOrSeed = () => {
+    const snapshot = readSessionSnapshot(sessionKey);
+    if (snapshot) {
+      setProducts(snapshot.products);
+      setOperations(snapshot.operations);
+      setLedger(snapshot.ledger);
+      return true;
+    }
+    setProducts(MOCK_PRODUCTS);
+    setOperations(MOCK_OPERATIONS);
+    setLedger(MOCK_LEDGER);
+    writeSessionSnapshot(sessionKey, {
+      products: MOCK_PRODUCTS,
+      operations: MOCK_OPERATIONS,
+      ledger: MOCK_LEDGER,
+    });
+    return false;
   };
 
   useEffect(() => {
@@ -136,7 +165,12 @@ export const StoreProvider = ({ children }: { children?: ReactNode }) => {
       }
       return;
     }
-    loadFromApi();
+
+    loadFromApi().then(success => {
+      if (!success) {
+        loadFromSnapshotOrSeed();
+      }
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiReady, sessionKey]);
 
